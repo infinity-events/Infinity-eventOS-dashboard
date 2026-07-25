@@ -19,7 +19,6 @@ amount:5,
 description:""
 });
 
-
 useEffect(()=>{
 
 if(festival){
