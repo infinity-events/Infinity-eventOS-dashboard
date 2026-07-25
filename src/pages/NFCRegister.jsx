@@ -1,6 +1,8 @@
-import {useSearchParams} from "react-router-dom";
 import {useState} from "react";
+import {useSearchParams} from "react-router-dom";
+import NFCScanner from "../components/NFCScanner";
 import {registerWristband} from "../api/wristbands";
+
 
 export default function NFCRegister(){
 
@@ -8,126 +10,106 @@ const [params]=useSearchParams();
 
 const festivalId=params.get("festival");
 
-const [uid,setUid]=useState("");
-const [status,setStatus]=useState("Pronto per la scansione");
-
-
-async function scanNFC(){
-
-if(!("NDEFReader" in window)){
-
-setStatus(
-"NFC non supportato. Usa Android Chrome."
-);
-
-return;
-
-}
-
-
-try{
-
-const ndef=new NDEFReader();
-
-await ndef.scan();
-
-setStatus(
-"Avvicina il braccialetto..."
-);
-
-
-ndef.onreading=async(event)=>{
-
-
-const uid=event.serialNumber;
-
-
-setUid(uid);
-
-setStatus(
-"Registrazione in corso..."
-);
-
-
-await registerWristband({
-
-uid,
-festivalId
-
-});
-
-
-setStatus(
-"✅ Braccialetto registrato"
-);
-
-
-};
-
-
-}catch(error){
-
-console.error(error);
-
-setStatus(
-"Errore lettura NFC"
-);
-
-}
-
-
-}
-
+const [uid,setUid]=useState(null);
+const [wristband,setWristband]=useState(null);
+const [error,setError]=useState(null);
 
 
 return(
 
-<div className="min-h-screen bg-black text-white flex items-center justify-center">
-
-<div className="bg-[#17181D] rounded-2xl p-8 w-[400px]">
+<main className="min-h-screen bg-black text-white p-6">
 
 
 <h1 className="text-3xl font-bold">
-Registrazione NFC
+Registrazione braccialetti NFC
 </h1>
 
 
 <p className="text-gray-400 mt-2">
-Festival:
-{festivalId}
+Festival ID: {festivalId}
 </p>
 
 
-<button
-onClick={scanNFC}
-className="bg-purple-600 rounded-xl p-4 w-full mt-8"
->
-📡 Leggi braccialetto
-</button>
+<NFCScanner
+
+onScan={async(value)=>{
+
+setUid(value);
+
+try{
+
+const result=await registerWristband({
+uid:value,
+festivalId
+});
 
 
-<div className="mt-6">
+setWristband(result);
 
-<p className="text-gray-400">
+
+}catch(err){
+
+console.error(err);
+
+setError(err.message);
+
+}
+
+}}
+
+/>
+
+
+{uid &&
+
+<div className="mt-6 bg-[#17181D] rounded-xl p-5">
+
+<h2 className="font-bold">
+Braccialetto trovato
+</h2>
+
+<p>
 UID:
 </p>
 
-<p className="text-purple-400 break-all">
-{uid || "-"}
+<code>
+{uid}
+</code>
+
+</div>
+
+}
+
+
+{wristband &&
+
+<div className="mt-6 bg-[#17181D] rounded-xl p-5">
+
+<h2 className="font-bold text-green-400">
+Registrato!
+</h2>
+
+<p>
+Codice: {wristband.code}
 </p>
 
-
-</div>
-
-
-<p className="mt-6 text-center text-gray-400">
-{status}
+<p>
+Attivazione: {wristband.activationCode}
 </p>
 
-
 </div>
 
-</div>
+}
+
+
+{error &&
+<p className="text-red-400 mt-5">
+{error}
+</p>
+}
+
+
+</main>
 
 )
 

@@ -1,6 +1,7 @@
 import {useEffect,useState} from "react";
 import {useFestival} from "../contexts/FestivalContext";
 import {getWristbands,getWristbandStats} from "../api/wristbands";
+import QRCode from "react-qr-code";
 
 export default function Wristbands(){
 
@@ -15,6 +16,8 @@ notActivated:0
 const [showRegister,setShowRegister]=useState(false);
 
 const [loading,setLoading]=useState(false);
+
+const [showQR,setShowQR]=useState(false);
 
 
 useEffect(()=>{
@@ -259,13 +262,26 @@ Registra braccialetto
 
 <button
 className="w-full bg-purple-600 p-4 rounded-xl mb-4"
-onClick={()=>{
-window.location.href=
-`/nfc/register?festival=${festival.id}`
-}}
+onClick={()=>setShowQR(true)}
 >
 📱 Scansiona NFC
 </button>
+
+{showQR && (
+
+<div className="mt-6 bg-white p-4 rounded-xl">
+
+<QRCode
+value={`${window.location.origin}/nfc/register?festival=${festival.id}`}
+/>
+
+<p className="text-black text-center mt-3 text-sm">
+Scansiona con il telefono NFC
+</p>
+
+</div>
+
+)}
 
 
 <button
