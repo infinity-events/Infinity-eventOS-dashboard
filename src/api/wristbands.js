@@ -1,7 +1,7 @@
 import {apiRequest} from "./client";
 
 export function getWristbands(festivalId){
- return apiRequest(`/wristbands/${festivalId}`);
+    return apiRequest(`/wristbands/festival/${festivalId}`);
 }
 
 export function getWristbandStats(festivalId){

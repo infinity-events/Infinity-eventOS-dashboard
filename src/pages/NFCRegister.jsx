@@ -8,39 +8,13 @@ const [params]=useSearchParams();
 const festivalId=params.get("festival");
 
 const [uid,setUid]=useState("");
-const [status,setStatus]=useState("");
+const [status,setStatus]=useState("Pronto");
 
-async function register(){
-
-try{
-
-await registerWristband({
-uid,
-festivalId
-});
-
-setStatus("Braccialetto registrato");
-
-setUid("");
-
-}catch(e){
-
-console.error(e);
-setStatus("Errore registrazione");
-
-}
-
-}
-
-
-async function scanNFC(){
+async function scan(){
 
 if(!("NDEFReader" in window)){
-
 setStatus("NFC non supportato");
-
 return;
-
 }
 
 try{
@@ -51,13 +25,20 @@ await ndef.scan();
 
 setStatus("Avvicina il braccialetto");
 
-ndef.onreading=(event)=>{
+ndef.onreading=async(event)=>{
 
 const uid=event.serialNumber;
 
 setUid(uid);
 
-setStatus("UID letto");
+setStatus("Registrazione...");
+
+await registerWristband({
+uid,
+festivalId
+});
+
+setStatus("✅ Braccialetto registrato");
 
 };
 
@@ -74,40 +55,37 @@ setStatus("Errore NFC");
 return(
 <div className="min-h-screen bg-black text-white flex items-center justify-center">
 
-<div className="bg-[#17181D] p-8 rounded-2xl w-[400px]">
+<div className="bg-[#17181D] rounded-2xl p-8 w-[400px]">
 
 <h1 className="text-3xl font-bold">
 Scanner NFC
 </h1>
 
 <p className="text-gray-400 mt-2">
-Registrazione braccialetti
+Registrazione braccialetti evento
 </p>
 
-
 <button
-onClick={scanNFC}
-className="bg-purple-600 p-4 rounded-xl w-full mt-6">
-📱 Avvia scansione NFC
+onClick={scan}
+className="bg-purple-600 rounded-xl p-4 w-full mt-6">
+
+📡 Avvia lettura NFC
+
 </button>
 
+<div className="mt-6">
 
-<input
-className="input w-full mt-5"
-placeholder="UID manuale"
-value={uid}
-onChange={e=>setUid(e.target.value)}
-/>
+<p>
+UID:
+</p>
 
+<p className="text-purple-400">
+{uid || "-"}
+</p>
 
-<button
-onClick={register}
-className="bg-white/10 p-4 rounded-xl w-full mt-4">
-Registra braccialetto
-</button>
+</div>
 
-
-<p className="text-center mt-5 text-gray-400">
+<p className="text-gray-400 mt-6 text-center">
 {status}
 </p>
 
