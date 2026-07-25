@@ -386,14 +386,16 @@ quantity:Number(e.target.value)
 <button
 disabled={loading}
 onClick={()=>create(data)}
+className="cursor-pointer mt-6 w-full bg-white text-black rounded-xl p-3 font-bold disabled:opacity-50"
 >
 {
-loading && (
-<p className="text-sm text-gray-400 mt-2">
-Generazione biglietti in corso...
-</p>
-)
+loading
+?
+"Generazione biglietti in corso..."
+:
+"Crea biglietti"
 }
+
 </button>
 
 
