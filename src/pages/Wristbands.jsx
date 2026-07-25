@@ -95,5 +95,3 @@ Annulla
 </div>
 )
 }
-
-export default Wristbands;
