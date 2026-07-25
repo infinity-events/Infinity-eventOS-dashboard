@@ -1,10 +1,11 @@
 import {useState} from "react";
 import {useFestival} from "../contexts/FestivalContext";
-
+import {updateFestival} from "../api/festivals";
 
 export default function Settings(){
 
 const {festival}=useFestival();
+const {festival,setFestival}=useFestival();
 
 const [settings,setSettings]=useState({
     nfcActivation:true,
@@ -34,21 +35,26 @@ setForm({
 }
 
 
-function save(){
+async function save(){
+    try{
+    const updated=await updateFestival(
+    festival.id,
+    form
+    );
+    setFestival(updated);
+    alert("Impostazioni salvate");
 
-console.log("SALVATAGGIO IMPOSTAZIONI:",form);
-
-alert("Impostazioni salvate");
-
+    }catch(error){
+    console.error(
+    "Errore salvataggio:",
+    error
+    );
+    }
 }
-
-
 
 return <div>
 
-
 <div className="mb-10">
-
 <h1 className="text-4xl font-bold">
 Impostazioni
 </h1>
