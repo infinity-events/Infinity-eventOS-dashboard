@@ -2,12 +2,14 @@ import { useEffect,useState } from "react";
 import { useFestival } from "../contexts/FestivalContext";
 import { getFestivals,createFestival } from "../api/festivals";
 import CreateFestivalModal from "../components/CreateFestivalModal";
+import {getAnalytics} from "../api/analytics";
 
 export default function Dashboard(){
 
 const {festival,setFestival}=useFestival();
 const [showModal,setShowModal]=useState(false);
 const [loading,setLoading]=useState(true);
+const [analytics,setAnalytics]=useState(null);
 
 useEffect(()=>{
 loadFestival();
@@ -21,8 +23,8 @@ const data=await getFestivals();
 
 if(data.length>0){
 setFestival(data[0]);
-}else{
-setShowModal(true);
+const stats=await getAnalytics(data[0].id);
+setAnalytics(stats);
 }
 
 }catch(error){
@@ -71,19 +73,29 @@ return <div>
 <p className="text-gray-400 mt-2">
 Panoramica evento
 </p>
-
 </div>
-
 
 <div className="grid grid-cols-4 gap-6">
+<Card
+title="Biglietti venduti"
+value={analytics?.tickets?.sold || 0}
+/>
 
-<Card title="Partecipanti" value="0"/>
-<Card title="Bracciali attivati" value="0"/>
-<Card title="Biglietti venduti" value="0"/>
-<Card title="Incassi" value="€0"/>
+<Card
+title="Bracciali attivati"
+value={analytics?.wristbands?.activated || 0}
+/>
 
+<Card
+title="Incassi"
+value={`€${analytics?.tickets?.revenue || 0}`}
+/>
+
+<Card
+title="Wallet speso"
+value={`€${analytics?.wallet?.spent || 0}`}
+/>
 </div>
-
 
 <div className="grid grid-cols-2 gap-6 mt-8">
 
@@ -94,10 +106,15 @@ Ultime attività
 </h2>
 
 <div className="space-y-4 text-gray-300">
-
-<p>📿 Nessun bracciale attivato</p>
-<p>🎟 Nessun biglietto venduto</p>
-<p>🚪 Nessun ingresso registrato</p>
+<p>
+🎟 {analytics?.tickets?.sold || 0} biglietti venduti
+</p>
+<p>
+📿 {analytics?.wristbands?.activated || 0} bracciali attivati
+</p>
+<p>
+💳 €{analytics?.wallet?.spent || 0} spesi tramite wallet
+</p>
 
 </div>
 
@@ -112,7 +129,16 @@ Stato evento
 
 <div className="bg-green-500/20 text-green-400 inline-block px-4 py-2 rounded-full">
 
-🟢 {festival?.status || "Bozza"}
+{festival?.status==="ACTIVE"
+?
+"🟢 Attivo"
+:
+festival?.status==="CLOSED"
+?
+"⚫ Chiuso"
+:
+"🟡 Bozza"
+}
 
 </div>
 
