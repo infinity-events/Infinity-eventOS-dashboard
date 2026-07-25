@@ -13,7 +13,7 @@ import Participants from "./pages/Participants";
 function Layout(){
 
 return(
-<div className="flex min-h-screen bg-black">
+<div className="flex min-h-screen bg-black text-white">
 
 <Sidebar/>
 
