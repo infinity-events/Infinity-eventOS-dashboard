@@ -9,6 +9,7 @@ import Festivals from "./pages/Festivals";
 import NFCRegister from "./pages/NFCRegister";
 import Participants from "./pages/Participants";
 import WristbandManual from "./pages/WristbandManual";
+import Wallet from "./pages/Wallet";
 
 
 function Layout(){
@@ -27,6 +28,7 @@ return(
 <Route path="/participants" element={<Participants/>}/>
 <Route path="/nfc/register" element={<NFCRegister/>}/>
 <Route path="/wristbands/manual" element={<WristbandManual/>}/>
+<Route path="/wallet" element={<Wallet/>}/>
 </Routes>
 </main>
 

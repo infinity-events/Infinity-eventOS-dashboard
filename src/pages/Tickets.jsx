@@ -11,6 +11,7 @@ const [tickets,setTickets]=useState([]);
 const [loading,setLoading]=useState(true);
 const [showModal,setShowModal]=useState(false);
 const [stats,setStats]=useState(null);
+const [loading,setLoading]=useState(false);
 
 
 useEffect(()=>{
@@ -47,9 +48,9 @@ setLoading(false);
 
 async function handleCreate(data){
 
-console.log("DATI CREAZIONE:",data);
-
 try{
+
+setLoading(true);
 
 for(let i=0;i<Number(data.quantity);i++){
 
@@ -61,18 +62,17 @@ price:Number(data.price)
 
 }
 
-
 await loadTickets();
 
 setShowModal(false);
 
-
 }catch(error){
 
-console.error(
-"Errore creazione ticket:",
-error
-);
+console.error("Errore creazione ticket:",error);
+
+}finally{
+
+setLoading(false);
 
 }
 
@@ -388,13 +388,16 @@ quantity:Number(e.target.value)
 
 
 <button
-
-className="bg-purple-600 p-3 rounded-xl w-full mt-6"
-
+disabled={loading}
 onClick={()=>create(data)}
-
 >
-Crea biglietto
+{
+loading && (
+<p className="text-sm text-gray-400 mt-2">
+Generazione biglietti in corso...
+</p>
+)
+}
 </button>
 
 
