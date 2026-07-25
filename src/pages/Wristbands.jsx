@@ -1,6 +1,6 @@
 import QRCode from "react-qr-code";
 
-function RegisterModal({festival,close,reload}){
+export default function RegisterModal({festival,close,reload}){
 const [mode,setMode]=useState(null);
 const [uid,setUid]=useState("");
 
@@ -95,3 +95,5 @@ Annulla
 </div>
 )
 }
+
+export default Wristbands;
