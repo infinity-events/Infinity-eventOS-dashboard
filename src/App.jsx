@@ -8,6 +8,7 @@ import Wristbands from "./pages/Wristbands";
 import Festivals from "./pages/Festivals";
 import NFCRegister from "./pages/NFCRegister";
 import Participants from "./pages/Participants";
+import WristbandManual from "./pages/WristbandManual";
 
 
 function Layout(){
@@ -25,6 +26,7 @@ return(
 <Route path="/wristbands" element={<Wristbands/>}/>
 <Route path="/participants" element={<Participants/>}/>
 <Route path="/nfc/register" element={<NFCRegister/>}/>
+<Route path="/wristbands/manual" element={<WristbandManual/>}/>
 </Routes>
 </main>
 

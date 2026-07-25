@@ -12,6 +12,7 @@ total:0,
 activated:0,
 notActivated:0
 });
+const [showRegister,setShowRegister]=useState(false);
 
 const [loading,setLoading]=useState(false);
 
@@ -142,9 +143,20 @@ Disponibili
 <div className="bg-[#17181D] rounded-xl p-5">
 
 
-<h2 className="text-xl font-bold mb-4">
+<div className="flex justify-between items-center mb-6">
+
+<h2 className="text-xl font-bold">
 Lista braccialetti
 </h2>
+
+<button
+className="bg-purple-600 px-5 py-3 rounded-xl hover:bg-purple-700"
+onClick={()=>setShowRegister(true)}
+>
++ Registra braccialetto
+</button>
+
+</div>
 
 
 {loading && (
@@ -234,6 +246,52 @@ Disponibile
 
 </div>
 
+{showRegister && (
+
+<div className="fixed inset-0 bg-black/70 flex items-center justify-center">
+
+<div className="bg-[#17181D] rounded-2xl p-8 w-[400px]">
+
+<h2 className="text-2xl font-bold mb-6">
+Registra braccialetto
+</h2>
+
+
+<button
+className="w-full bg-purple-600 p-4 rounded-xl mb-4"
+onClick={()=>{
+window.location.href=
+`/nfc/register?festival=${festival.id}`
+}}
+>
+📱 Scansiona NFC
+</button>
+
+
+<button
+className="w-full bg-gray-700 p-4 rounded-xl"
+onClick={()=>{
+window.location.href=
+`/wristbands/manual?festival=${festival.id}`
+}}
+>
+⌨ Inserisci UID manualmente
+</button>
+
+
+<button
+className="mt-5 text-gray-400"
+onClick={()=>setShowRegister(false)}
+>
+Annulla
+</button>
+
+
+</div>
+
+</div>
+
+)}
 
 </div>
 
