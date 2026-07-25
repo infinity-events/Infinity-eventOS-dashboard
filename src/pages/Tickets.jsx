@@ -45,16 +45,20 @@ setLoading(false);
 
 }
 
-
 async function handleCreate(data){
-    try{
 
-    for(let i=0;i<Number(data.quantity);i++){
-        await createTicket({
-        festivalId:festival.id,
-        type:data.type,
-        price:Number(data.price)
-    });
+console.log("DATI CREAZIONE:",data);
+
+try{
+
+for(let i=0;i<Number(data.quantity);i++){
+
+await createTicket({
+festivalId:festival.id,
+type:data.type,
+price:Number(data.price)
+});
+
 }
 
 
@@ -65,12 +69,14 @@ setShowModal(false);
 
 }catch(error){
 
-console.error("Errore creazione ticket:",error);
+console.error(
+"Errore creazione ticket:",
+error
+);
 
 }
 
 }
-
 
 
 if(!festival){
