@@ -140,46 +140,52 @@ Salva modifiche
 
 </div>
 
-
-
-
-
 <div className="space-y-6">
 
-
 <div className="bg-[#17181D] rounded-2xl p-6 border border-white/5">
-
 
 <h2 className="text-xl font-bold mb-5">
 Sistema NFC
 </h2>
 
 
-<div className="space-y-4 text-gray-300">
+<div className="space-y-5">
 
 
-<p>
-📿 Attivazione bracciali
-<span className="float-right text-green-400">
-Attiva
-</span>
-</p>
+<Toggle
+title="Attivazione bracciali"
+description="Permette agli utenti di associare il bracciale NFC al proprio account"
+enabled={settings.nfcActivation}
+setEnabled={()=>setSettings({
+...settings,
+nfcActivation:!settings.nfcActivation
+})}
+/>
 
 
-<p>
-💳 Pagamenti wallet
-<span className="float-right text-green-400">
-Attivi
-</span>
-</p>
+
+<Toggle
+title="Pagamenti wallet"
+description="Abilita i pagamenti tramite bracciale NFC"
+enabled={settings.walletPayments}
+setEnabled={()=>setSettings({
+...settings,
+walletPayments:!settings.walletPayments
+})}
+/>
 
 
-<p>
-🔒 Blocco automatico fine evento
-<span className="float-right text-gray-400">
-Disattivo
-</span>
-</p>
+
+<Toggle
+title="Blocco automatico fine evento"
+description="Blocca automaticamente i bracciali alla chiusura del festival"
+enabled={settings.autoLock}
+setEnabled={()=>setSettings({
+...settings,
+autoLock:!settings.autoLock
+})}
+/>
+
 
 
 </div>
