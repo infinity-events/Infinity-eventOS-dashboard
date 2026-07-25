@@ -4,11 +4,18 @@ export function getTickets(festivalId){
 return apiRequest(`/tickets/${festivalId}`);
 }
 
-export function createTicket(data){
-    return apiRequest("/tickets",{
+export async function createTicket(data){
+console.log("INVIO TICKET API:",data);
+    const response = await apiRequest(
+    "/tickets",
+        {
         method:"POST",
         body:JSON.stringify(data)
-    });
+        }
+    );
+
+console.log("RISPOSTA TICKET API:",response);
+return response;
 }
 
 export function getTicketStats(festivalId){
