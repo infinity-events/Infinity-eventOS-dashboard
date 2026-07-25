@@ -11,6 +11,7 @@ import Participants from "./pages/Participants";
 import WristbandManual from "./pages/WristbandManual";
 import Wallet from "./pages/Wallet";
 import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 
 
 function Layout(){
@@ -31,6 +32,7 @@ return(
 <Route path="/wristbands/manual" element={<WristbandManual/>}/>
 <Route path="/wallet" element={<Wallet/>}/>
 <Route path="/analytics" element={<Analytics/>}/>
+<Route path="/settings" element={<Settings/>}/>
 </Routes>
 </main>
 

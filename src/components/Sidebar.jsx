@@ -58,7 +58,7 @@ icon:ChartBar
 
 {
 name:"Impostazioni",
-path:"#",
+path:"/settings",
 icon:Settings
 }
 
