@@ -38,6 +38,11 @@ setUid(value);
 
 try{
 
+console.log("DATI REGISTER:",{
+uid:value,
+festivalId
+});
+
 const result=await registerWristband({
 uid:value,
 festivalId
@@ -46,6 +51,9 @@ festivalId
 
 setWristband(result);
 
+setTimeout(()=>{
+window.location.href="/wristbands";
+},1500);
 
 }catch(err){
 
