@@ -46,7 +46,7 @@ icon:Users
 
 {
 name:"Wallet",
-path:"#",
+path:"/wallet",
 icon:WalletCards
 },
 
