@@ -4,8 +4,7 @@ import {updateFestival} from "../api/festivals";
 
 export default function Settings(){
 
-const {festival}=useFestival();
-const {festival,setFestival}=useFestival();
+const {festival, setFestival}=useFestival();
 
 const [settings,setSettings]=useState({
     nfcActivation:true,
