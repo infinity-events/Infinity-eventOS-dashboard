@@ -46,7 +46,7 @@ setStats(data);
 }catch(error){
 
 console.error(
-"Errore caricamento statistiche wallet:",
+"Errore caricamento wallet:",
 error
 );
 
@@ -62,7 +62,6 @@ try{
 
 setLoading(true);
 
-
 await topupWallet({
 
 wristbandCode:topup.wristbandCode,
@@ -75,22 +74,15 @@ await loadStats();
 
 
 setTopup({
-
 wristbandCode:"",
 amount:20
-
 });
 
 
 }catch(error){
 
-console.error(
-"Errore ricarica:",
-error
-);
-
+console.error(error);
 alert(error.message);
-
 
 }finally{
 
@@ -102,13 +94,11 @@ setLoading(false);
 
 
 
-
 async function handlePayment(){
 
 try{
 
 setLoading(true);
-
 
 await payWallet({
 
@@ -133,13 +123,8 @@ description:""
 
 }catch(error){
 
-console.error(
-"Errore pagamento:",
-error
-);
-
+console.error(error);
 alert(error.message);
-
 
 }finally{
 
@@ -151,19 +136,18 @@ setLoading(false);
 
 
 
-return(
-
-<div className="space-y-6">
+return <div>
 
 
-<div>
 
-<h1 className="text-3xl font-bold">
+<div className="mb-10">
+
+<h1 className="text-4xl font-bold">
 Wallet
 </h1>
 
-<p className="opacity-70 mt-1">
-Gestione pagamenti e ricariche dei braccialetti
+<p className="text-gray-400 mt-2">
+Gestione pagamenti, ricariche e saldo braccialetti
 </p>
 
 </div>
@@ -171,62 +155,31 @@ Gestione pagamenti e ricariche dei braccialetti
 
 
 
-<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div className="grid grid-cols-4 gap-6">
 
 
-<div className="rounded-xl border p-5">
-
-<p className="opacity-70">
-Wallet attivi
-</p>
-
-<h2 className="text-2xl font-bold mt-2">
-{stats?.wallets ?? 0}
-</h2>
-
-</div>
+<Card
+title="Wallet attivi"
+value={stats?.wallets || 0}
+/>
 
 
-
-<div className="rounded-xl border p-5">
-
-<p className="opacity-70">
-Saldo totale
-</p>
-
-<h2 className="text-2xl font-bold mt-2">
-€ {stats?.balance ?? 0}
-</h2>
-
-</div>
+<Card
+title="Saldo totale"
+value={`€${stats?.balance || 0}`}
+/>
 
 
-
-<div className="rounded-xl border p-5">
-
-<p className="opacity-70">
-Ricariche
-</p>
-
-<h2 className="text-2xl font-bold mt-2">
-€ {stats?.topup ?? 0}
-</h2>
-
-</div>
+<Card
+title="Totale ricaricato"
+value={`€${stats?.topup || 0}`}
+/>
 
 
-
-<div className="rounded-xl border p-5">
-
-<p className="opacity-70">
-Speso
-</p>
-
-<h2 className="text-2xl font-bold mt-2">
-€ {stats?.spent ?? 0}
-</h2>
-
-</div>
+<Card
+title="Totale speso"
+value={`€${stats?.spent || 0}`}
+/>
 
 
 </div>
@@ -235,32 +188,33 @@ Speso
 
 
 
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div className="grid grid-cols-2 gap-6 mt-8">
 
 
 
-<div className="rounded-xl border p-6">
+<div className="bg-[#17181D] rounded-2xl p-6 border border-white/5">
 
-<h2 className="text-xl font-bold mb-4">
+
+<h2 className="text-xl font-bold mb-5">
 Ricarica braccialetto
 </h2>
 
 
-
 <input
 
-className="w-full rounded-lg border p-3 mb-3"
+className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white mb-4"
 
 placeholder="Codice braccialetto"
 
 value={topup.wristbandCode}
 
-onChange={(e)=>
-setTopup({
+onChange={(e)=>setTopup({
+
 ...topup,
+
 wristbandCode:e.target.value
-})
-}
+
+})}
 
 />
 
@@ -268,7 +222,7 @@ wristbandCode:e.target.value
 
 <input
 
-className="w-full rounded-lg border p-3 mb-4"
+className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white mb-5"
 
 type="number"
 
@@ -276,12 +230,13 @@ placeholder="Importo"
 
 value={topup.amount}
 
-onChange={(e)=>
-setTopup({
+onChange={(e)=>setTopup({
+
 ...topup,
+
 amount:e.target.value
-})
-}
+
+})}
 
 />
 
@@ -293,7 +248,7 @@ disabled={loading}
 
 onClick={handleTopup}
 
-className="w-full rounded-lg p-3 bg-primary text-white"
+className="w-full bg-white text-black rounded-xl p-3 font-bold"
 
 >
 
@@ -308,36 +263,35 @@ loading
 </button>
 
 
-
 </div>
 
 
 
 
 
+<div className="bg-[#17181D] rounded-2xl p-6 border border-white/5">
 
-<div className="rounded-xl border p-6">
 
-<h2 className="text-xl font-bold mb-4">
+<h2 className="text-xl font-bold mb-5">
 Pagamento manuale
 </h2>
 
 
-
 <input
 
-className="w-full rounded-lg border p-3 mb-3"
+className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white mb-4"
 
 placeholder="Codice braccialetto"
 
 value={payment.wristbandCode}
 
-onChange={(e)=>
-setPayment({
+onChange={(e)=>setPayment({
+
 ...payment,
+
 wristbandCode:e.target.value
-})
-}
+
+})}
 
 />
 
@@ -345,7 +299,7 @@ wristbandCode:e.target.value
 
 <input
 
-className="w-full rounded-lg border p-3 mb-3"
+className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white mb-4"
 
 type="number"
 
@@ -353,12 +307,13 @@ placeholder="Importo"
 
 value={payment.amount}
 
-onChange={(e)=>
-setPayment({
+onChange={(e)=>setPayment({
+
 ...payment,
+
 amount:e.target.value
-})
-}
+
+})}
 
 />
 
@@ -366,18 +321,19 @@ amount:e.target.value
 
 <input
 
-className="w-full rounded-lg border p-3 mb-4"
+className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white mb-5"
 
 placeholder="Descrizione"
 
 value={payment.description}
 
-onChange={(e)=>
-setPayment({
+onChange={(e)=>setPayment({
+
 ...payment,
+
 description:e.target.value
-})
-}
+
+})}
 
 />
 
@@ -389,7 +345,7 @@ disabled={loading}
 
 onClick={handlePayment}
 
-className="w-full rounded-lg p-3 bg-primary text-white"
+className="w-full bg-white text-black rounded-xl p-3 font-bold"
 
 >
 
@@ -404,6 +360,28 @@ loading
 </button>
 
 
+</div>
+
+
+</div>
+
+
+
+
+<div className="mt-8 bg-[#17181D] rounded-2xl p-6 border border-white/5">
+
+
+<h2 className="text-xl font-bold mb-5">
+Ultime transazioni
+</h2>
+
+
+<div className="text-gray-400">
+
+Nessuna transazione disponibile
+
+</div>
+
 
 </div>
 
@@ -411,10 +389,22 @@ loading
 
 </div>
 
+}
 
+
+
+function Card({title,value}){
+
+return <div className="bg-[#17181D] rounded-2xl p-6 border border-white/5">
+
+<p className="text-gray-400">
+{title}
+</p>
+
+<h2 className="text-3xl font-bold mt-3">
+{value}
+</h2>
 
 </div>
-
-);
 
 }
