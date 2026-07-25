@@ -17,3 +17,9 @@ method:"POST",
 body:JSON.stringify(data)
 });
 }
+
+export function getTransactions(userId){
+return apiRequest(
+`/wallet/transactions/${userId}`
+);
+}

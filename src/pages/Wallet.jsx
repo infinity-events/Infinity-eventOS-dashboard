@@ -1,6 +1,6 @@
 import {useEffect,useState} from "react";
 import {useFestival} from "../contexts/FestivalContext";
-import {walletStats,topupWallet,payWallet} from "../api/wallet";
+import {walletStats,topupWallet,payWallet, getTransactions} from "../api/wallet";
 
 
 export default function Wallet(){
@@ -9,7 +9,7 @@ const {festival}=useFestival();
 
 const [stats,setStats]=useState(null);
 const [loading,setLoading]=useState(false);
-
+const [transactions,setTransactions]=useState([]);
 
 const [topup,setTopup]=useState({
 wristbandCode:"",
@@ -49,6 +49,14 @@ console.error(
 "Errore caricamento wallet:",
 error
 );
+
+} if(festival?.ownerId){
+
+const tx=await getTransactions(
+festival.ownerId
+);
+
+setTransactions(tx);
 
 }
 
@@ -376,9 +384,67 @@ Ultime transazioni
 </h2>
 
 
-<div className="text-gray-400">
+<div className="space-y-3">
 
+{
+transactions.length===0 && (
+
+<p className="text-gray-400">
 Nessuna transazione disponibile
+</p>
+
+)
+}
+
+
+{
+transactions.map((tx)=>(
+
+<div
+key={tx.id}
+className="flex justify-between items-center border-b border-white/5 pb-3"
+>
+
+<div>
+
+<p className="font-bold">
+{tx.type==="TOPUP" ? "💳 Ricarica" : "💰 Acquisto"}
+</p>
+
+<p className="text-gray-400 text-sm">
+{tx.description}
+</p>
+
+</div>
+
+
+<p className={
+tx.type==="TOPUP"
+?
+"text-green-400 font-bold"
+:
+"text-red-400 font-bold"
+}
+>
+
+{
+tx.type==="TOPUP"
+?
+"+ "
+:
+"- "
+}
+
+€{tx.amount}
+
+</p>
+
+
+</div>
+
+))
+
+}
 
 </div>
 
