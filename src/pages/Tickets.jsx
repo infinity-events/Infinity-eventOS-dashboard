@@ -11,7 +11,6 @@ const [tickets,setTickets]=useState([]);
 const [loading,setLoading]=useState(true);
 const [showModal,setShowModal]=useState(false);
 const [stats,setStats]=useState(null);
-const [loading,setLoading]=useState(false);
 
 
 useEffect(()=>{
