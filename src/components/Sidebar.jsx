@@ -52,7 +52,7 @@ icon:WalletCards
 
 {
 name:"Analytics",
-path:"#",
+path:"/analytics",
 icon:ChartBar
 },
 
