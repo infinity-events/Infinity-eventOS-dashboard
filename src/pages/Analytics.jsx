@@ -2,6 +2,17 @@ import {useEffect,useState} from "react";
 import {useFestival} from "../contexts/FestivalContext";
 import {getAnalytics} from "../api/analytics";
 
+import {
+PieChart,
+Pie,
+Cell,
+ResponsiveContainer,
+BarChart,
+Bar,
+XAxis,
+YAxis,
+Tooltip
+} from "recharts";
 
 export default function Analytics(){
 
@@ -193,7 +204,29 @@ Speso
 
 }
 
+const ticketChart=Object.entries(
+data?.tickets?.categories || {}
+).map(([name,value])=>({
 
+name,
+value
+
+}));
+
+
+const walletChart=[
+
+{
+name:"Ricariche",
+value:data?.wallet?.topups || 0
+},
+
+{
+name:"Speso",
+value:data?.wallet?.spent || 0
+}
+
+];
 
 function Card({title,value}){
 
@@ -218,3 +251,110 @@ return (
 )
 
 }
+
+<div className="grid grid-cols-2 gap-6 mt-8">
+
+
+<div className="bg-[#17181D] rounded-2xl p-6 border border-white/5">
+
+
+<h2 className="text-xl font-bold mb-5">
+Distribuzione biglietti
+</h2>
+
+
+<div className="h-72">
+
+
+<ResponsiveContainer>
+
+<PieChart>
+
+<Pie
+
+data={ticketChart}
+
+dataKey="value"
+
+nameKey="name"
+
+outerRadius={100}
+
+>
+
+{
+ticketChart.map(
+(entry,index)=>(
+
+<Cell
+key={index}
+/>
+
+)
+)
+}
+
+</Pie>
+
+
+<Tooltip/>
+
+
+</PieChart>
+
+
+</ResponsiveContainer>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div className="bg-[#17181D] rounded-2xl p-6 border border-white/5">
+
+
+<h2 className="text-xl font-bold mb-5">
+Wallet
+</h2>
+
+
+<div className="h-72">
+
+
+<ResponsiveContainer>
+
+
+<BarChart data={walletChart}>
+
+
+<XAxis dataKey="name"/>
+
+<YAxis/>
+
+
+<Tooltip/>
+
+
+<Bar
+dataKey="value"
+/>
+
+
+</BarChart>
+
+
+</ResponsiveContainer>
+
+
+</div>
+
+
+</div>
+
+
+</div>
