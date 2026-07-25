@@ -7,6 +7,7 @@ export default function Wallet(){
 const {festival}=useFestival();
 
 const [stats,setStats]=useState(null);
+const [loading,setLoading]=useState(false);
 
 const [topup,setTopup]=useState({
 wristbandCode:"",
