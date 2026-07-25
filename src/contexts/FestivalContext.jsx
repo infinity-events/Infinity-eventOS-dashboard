@@ -1,58 +1,65 @@
-import { createContext, useContext, useState } from "react";
+import {createContext,useContext,useState} from "react";
 
-
-const FestivalContext = createContext();
-
-
+const FestivalContext=createContext();
 
 export function FestivalProvider({children}){
 
-
-const [festival,setFestival] = useState(null);
-
-
-
-function addTicket(ticket){
+const [festival,setFestivalState]=useState(
+JSON.parse(localStorage.getItem("festival")) || null
+);
 
 
-setFestival(prev => ({
+function setFestival(data){
 
-...prev,
+setFestivalState(data);
 
-tickets:[
-
-...(prev.tickets || []),
-
-ticket
-
-]
-
-}));
+localStorage.setItem(
+"festival",
+JSON.stringify(data)
+);
 
 }
 
 
+function addTicket(ticket){
 
-return (
+setFestivalState(prev=>{
 
+const updated={
+...prev,
+tickets:[
+...(prev.tickets || []),
+ticket
+]
+};
+
+localStorage.setItem(
+"festival",
+JSON.stringify(updated)
+);
+
+return updated;
+
+});
+
+}
+
+
+return(
 <FestivalContext.Provider
-
 value={{
 festival,
 setFestival,
 addTicket
 }}
-
 >
 
 {children}
 
 </FestivalContext.Provider>
-
 )
 
 }
-
 
 
 export function useFestival(){

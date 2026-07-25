@@ -1,98 +1,242 @@
-import QRCode from "react-qr-code";
 import {useEffect,useState} from "react";
+import {useFestival} from "../contexts/FestivalContext";
+import {getWristbands,getWristbandStats} from "../api/wristbands";
 
-export default function RegisterModal({festival,close,reload}){
-const [mode,setMode]=useState(null);
-const [uid,setUid]=useState("");
+export default function Wristbands(){
 
-async function submit(){
-if(!uid)return;
+const {festival}=useFestival();
 
-try{
-await registerWristband({
-uid,
-festivalId:festival.id
+const [wristbands,setWristbands]=useState([]);
+const [stats,setStats]=useState({
+total:0,
+activated:0,
+notActivated:0
 });
 
-await reload();
-close();
+const [loading,setLoading]=useState(false);
 
-}catch(e){
-console.error("Errore registrazione:",e);
+
+useEffect(()=>{
+
+if(!festival)return;
+
+loadWristbands();
+
+},[festival]);
+
+
+async function loadWristbands(){
+
+try{
+
+setLoading(true);
+
+const data=await getWristbands(festival.id);
+const stat=await getWristbandStats(festival.id);
+
+setWristbands(data);
+setStats(stat);
+
+}catch(error){
+
+console.error(
+"Errore caricamento braccialetti:",
+error
+);
+
+}finally{
+
+setLoading(false);
+
 }
+
 }
+
+
+if(!festival){
 
 return(
-<div className="fixed inset-0 bg-black/60 flex items-center justify-center">
-<div className="bg-[#17181D] p-8 rounded-2xl w-[420px]">
 
-<h2 className="text-2xl font-bold">
-Registra braccialetto
+<div className="text-white">
+
+<h1 className="text-3xl font-bold">
+Braccialetti
+</h1>
+
+<p className="text-gray-400 mt-4">
+Nessun festival selezionato
+</p>
+
+</div>
+
+)
+
+}
+
+
+return(
+
+<div className="text-white">
+
+<div className="mb-6">
+
+<h1 className="text-3xl font-bold">
+Braccialetti
+</h1>
+
+<p className="text-gray-400">
+Festival:
+<span className="text-white ml-2">
+{festival.name}
+</span>
+</p>
+
+</div>
+
+
+<div className="grid grid-cols-3 gap-5 mb-8">
+
+
+<div className="bg-[#17181D] rounded-xl p-5">
+
+<p className="text-gray-400">
+Totali
+</p>
+
+<h2 className="text-3xl font-bold">
+{stats.total}
 </h2>
 
-<p className="text-gray-400 mt-2">
-Scegli il metodo di registrazione
+</div>
+
+
+<div className="bg-[#17181D] rounded-xl p-5">
+
+<p className="text-gray-400">
+Attivati
 </p>
 
-<div className="flex flex-col gap-3 mt-6">
-
-<button
-onClick={()=>setMode("nfc")}
-className="bg-purple-600 p-4 rounded-xl">
-📱 Scansiona con telefono NFC
-</button>
-
-<button
-onClick={()=>setMode("manual")}
-className="bg-white/10 p-4 rounded-xl">
-⌨ Inserisci UID manualmente
-</button>
+<h2 className="text-3xl font-bold text-green-400">
+{stats.activated}
+</h2>
 
 </div>
 
-{mode==="manual"&&(
-<>
-<input
-className="input w-full mt-5"
-placeholder="UID NFC"
-value={uid}
-onChange={e=>setUid(e.target.value)}
-/>
 
-<button
-onClick={submit}
-className="bg-purple-600 mt-4 px-5 py-3 rounded-xl w-full">
-Registra
-</button>
-</>
+<div className="bg-[#17181D] rounded-xl p-5">
+
+<p className="text-gray-400">
+Disponibili
+</p>
+
+<h2 className="text-3xl font-bold text-yellow-400">
+{stats.notActivated}
+</h2>
+
+</div>
+
+
+</div>
+
+
+<div className="bg-[#17181D] rounded-xl p-5">
+
+
+<h2 className="text-xl font-bold mb-4">
+Lista braccialetti
+</h2>
+
+
+{loading && (
+<p className="text-gray-400">
+Caricamento...
+</p>
 )}
 
-{mode==="nfc"&&(
-<div className="mt-6 text-center">
 
-<p className="text-gray-400 mb-4">
-Scansiona con il telefono dell'operatore
-</p>
+<table className="w-full">
 
-<QRCode
-value={`${window.location.origin}/nfc/register?festival=${festival.id}`}
-size={220}
-/>
+<thead>
 
-<p className="text-xs text-gray-500 mt-4">
-Apri la fotocamera e inquadra il QR
-</p>
+<tr className="border-b border-gray-700 text-gray-400">
+
+<th className="text-left py-3">
+UID
+</th>
+
+<th>
+Codice
+</th>
+
+<th>
+Stato
+</th>
+
+<th>
+Utente
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+{wristbands.map(w=>(
+
+<tr
+key={w.id}
+className="border-b border-gray-800"
+>
+
+<td className="py-3">
+{w.uid || "-"}
+</td>
+
+<td>
+{w.code}
+</td>
+
+<td>
+
+{w.activated ?
+
+<span className="text-green-400">
+Attivo
+</span>
+
+:
+
+<span className="text-yellow-400">
+Disponibile
+</span>
+
+}
+
+</td>
+
+<td>
+
+{w.user?.email || "-"}
+
+</td>
+
+</tr>
+
+))}
+
+
+</tbody>
+
+</table>
+
 
 </div>
-)}
 
-<button
-onClick={close}
-className="mt-4 text-gray-400 w-full">
-Annulla
-</button>
 
 </div>
-</div>
+
 )
+
 }
