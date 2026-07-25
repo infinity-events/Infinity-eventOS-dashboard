@@ -271,8 +271,8 @@ window.location.href=
 <button
 className="w-full bg-gray-700 p-4 rounded-xl"
 onClick={()=>{
-window.location.href=
-`/wristbands/manual?festival=${festival.id}`
+window.location.href =
+`${window.location.origin}/nfc/register?festival=${festival.id}`
 }}
 >
 ⌨ Inserisci UID manualmente
