@@ -230,3 +230,58 @@ Archivia evento
 </div>
 
 }
+
+function Toggle({title,description,enabled,setEnabled}){
+
+return (
+
+<div className="flex items-center justify-between">
+
+
+<div>
+
+<p className="font-bold">
+{title}
+</p>
+
+<p className="text-gray-400 text-sm mt-1">
+{description}
+</p>
+
+</div>
+
+
+<button
+
+onClick={setEnabled}
+
+className={`cursor-pointer w-14 h-7 rounded-full p-1 transition ${
+enabled
+?
+"bg-green-500"
+:
+"bg-gray-600"
+}`}
+
+>
+
+<div
+
+className={`bg-white w-5 h-5 rounded-full transition ${
+enabled
+?
+"translate-x-7"
+:
+"translate-x-0"
+}`}
+
+/>
+
+</button>
+
+
+</div>
+
+)
+
+}
