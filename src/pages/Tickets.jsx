@@ -8,8 +8,8 @@ export default function Tickets(){
 const {festival}=useFestival();
 
 const [tickets,setTickets]=useState([]);
-const [loading,setLoading]=useState(true);
 const [showModal,setShowModal]=useState(false);
+const [loading,setLoading]=useState(true);
 const [stats,setStats]=useState(null);
 
 
@@ -264,6 +264,7 @@ showModal&&
 <CreateTicketModal
 close={()=>setShowModal(false)}
 create={handleCreate}
+loading={loading}
 />
 
 }
@@ -293,7 +294,7 @@ return <div className="bg-[#17181D] rounded-2xl p-6 border border-white/5">
 
 
 
-function CreateTicketModal({close,create}){
+function CreateTicketModal({close,create,loading}){
 
 const [data,setData]=useState({
 
