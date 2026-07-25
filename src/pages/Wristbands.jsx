@@ -1,4 +1,5 @@
 import QRCode from "react-qr-code";
+import {useEffect,useState} from "react";
 
 export default function RegisterModal({festival,close,reload}){
 const [mode,setMode]=useState(null);
