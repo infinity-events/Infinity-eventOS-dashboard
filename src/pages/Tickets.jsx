@@ -54,7 +54,8 @@ setLoading(true);
 await createTicket({
 festivalId:festival.id,
 type:data.type,
-price:Number(data.price)
+price:Number(data.price),
+quantity:Number(data.quantity)
 });
 
 await loadTickets();
