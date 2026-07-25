@@ -51,15 +51,11 @@ try{
 
 setLoading(true);
 
-for(let i=0;i<Number(data.quantity);i++){
-
 await createTicket({
 festivalId:festival.id,
 type:data.type,
 price:Number(data.price)
 });
-
-}
 
 await loadTickets();
 

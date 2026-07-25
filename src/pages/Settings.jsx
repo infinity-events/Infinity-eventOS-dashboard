@@ -5,6 +5,7 @@ import {useFestival} from "../contexts/FestivalContext";
 export default function Settings(){
 
 const {festival}=useFestival();
+
 const [settings,setSettings]=useState({
     nfcActivation:true,
     walletPayments:true,
