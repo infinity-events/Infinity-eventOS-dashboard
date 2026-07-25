@@ -47,33 +47,18 @@ setLoading(false);
 
 
 async function handleCreate(data){
+    try{
 
-try{
+    for(let i=0;i<Number(data.quantity);i++){
+        await createTicket({
+        festivalId:festival.id,
+        type:data.type,
+        price:Number(data.price)
+    });
+}
 
-await createTicket({
-festivalId:festival.id,
-type:data.type,
-price:Number(data.price),
-quantity:Number(data.quantity)
-});
 
 await loadTickets();
-
-setShowModal(false);
-
-setTickets([
-...tickets,
-ticket
-]);
-
-setShowModal(false);
-
-
-setTickets([
-...tickets,
-ticket
-]);
-
 
 setShowModal(false);
 
