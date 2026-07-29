@@ -87,7 +87,7 @@ font-bold
 mb-10
 ">
 
-∞ Infinity EventOS
+<img src="/favicon.svg" alt="logo-dash"/> Infinity EventOS
 
 </h1>
 
