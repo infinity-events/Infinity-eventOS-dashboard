@@ -85,9 +85,23 @@ p-6
 text-xl
 font-bold
 mb-10
+flex
+items-center
+gap-3
 ">
 
-<img src="/favicon.svg" alt="logo-dash" /> Infinity EventOS
+<img
+src="/favicon.svg"
+alt="logo-dash"
+className="
+h-9
+w-9
+shrink-0
+object-contain
+brightness-0
+invert
+"
+/> Infinity EventOS
 
 </h1>
 
