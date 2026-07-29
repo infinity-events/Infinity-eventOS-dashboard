@@ -14,32 +14,77 @@ YAxis,
 Tooltip
 } from "recharts";
 
+const API_URL="https://infinity-eventos-api.onrender.com";
 
 export default function Analytics(){
 
 const {festival}=useFestival();
 const [data,setData]=useState(null);
 const [loading,setLoading]=useState(true);
+const [reportLoading,setReportLoading]=useState(false);
 
 useEffect(()=>{
 if(festival) loadAnalytics();
 },[festival]);
 
-
 async function loadAnalytics(){
 
 try{
-
 const result=await getAnalytics(festival.id);
 setData(result);
+}catch(error){
+console.error("Errore analytics:",error);
+}finally{
+setLoading(false);
+}
+
+}
+
+async function generateReport(){
+
+try{
+
+setReportLoading(true);
+
+await fetch(`${API_URL}/reports/generate`,{
+method:"POST"
+});
+
+alert("Report generato");
 
 }catch(error){
 
-console.error("Errore analytics:",error);
+console.error(error);
+alert("Errore generazione report");
 
 }finally{
 
-setLoading(false);
+setReportLoading(false);
+
+}
+
+}
+
+async function sendTestReport(){
+
+try{
+
+setReportLoading(true);
+
+await fetch(`${API_URL}/reports/email-test`,{
+method:"POST"
+});
+
+alert("Email inviata");
+
+}catch(error){
+
+console.error(error);
+alert("Errore invio email");
+
+}finally{
+
+setReportLoading(false);
 
 }
 
@@ -50,51 +95,39 @@ if(loading)
 return <div className="text-white text-xl p-10">Caricamento...</div>;
 
 
-const ticketChart=data?.tickets?.categories
-?
+const ticketChart=data?.tickets?.categories?
 Object.entries(data.tickets.categories).map(([name,value])=>({
 name,
 value
-}))
-:
-[];
+})):[];
 
 
 const walletChart=[
-{
-name:"Ricariche",
-value:data?.wallet?.topups||0
-},
-{
-name:"Speso",
-value:data?.wallet?.spent||0
-}
+{name:"Ricariche",value:data?.wallet?.topups||0},
+{name:"Speso",value:data?.wallet?.spent||0}
 ];
+
+
+const activation=
+Math.round(
+((data?.wristbands?.activated||0)/
+(data?.tickets?.sold||1))*100
+);
 
 
 return <div>
 
 <div className="mb-10">
-
-<h1 className="text-4xl font-bold">
-Analytics
-</h1>
-
-<p className="text-gray-400 mt-2">
-Statistiche evento in tempo reale
-</p>
-
+<h1 className="text-4xl font-bold">Analytics</h1>
+<p className="text-gray-400 mt-2">Statistiche evento in tempo reale</p>
 </div>
 
 
 <div className="grid grid-cols-4 gap-6">
 
 <Card title="Biglietti venduti" value={data?.tickets?.sold||0}/>
-
 <Card title="Incasso ticket" value={`€${data?.tickets?.revenue||0}`}/>
-
 <Card title="Bracciali attivati" value={data?.wristbands?.activated||0}/>
-
 <Card title="Spesa wallet" value={`€${data?.wallet?.spent||0}`}/>
 
 </div>
@@ -117,21 +150,16 @@ Categorie biglietti
 
 <Pie data={ticketChart} dataKey="value" nameKey="name" outerRadius={100}>
 
-{
-ticketChart.map((item,index)=>(
+{ticketChart.map((item,index)=>(
 
-<Cell
-key={index}
-fill={[
+<Cell key={index} fill={[
 "#8b5cf6",
 "#3b82f6",
 "#22c55e",
 "#f59e0b"
-][index%4]}
-/>
+][index%4]}/>
 
-))
-}
+))}
 
 </Pie>
 
@@ -160,9 +188,7 @@ Wallet
 <BarChart data={walletChart}>
 
 <XAxis dataKey="name"/>
-
 <YAxis/>
-
 <Tooltip/>
 
 <Bar dataKey="value"/>
@@ -179,31 +205,93 @@ Wallet
 </div>
 
 
-<div className="bg-[#17181D] rounded-2xl p-6 border border-white/5 mt-8">
+<div className="grid grid-cols-2 gap-6 mt-8">
+
+
+<div className="bg-[#17181D] rounded-2xl p-6 border border-white/5">
 
 <h2 className="text-xl font-bold mb-5">
-Riepilogo
+📄 Report automatici
 </h2>
 
-<div className="text-gray-300 space-y-3">
+<div className="space-y-4 text-gray-300">
 
 <p>
-🎟 Ticket venduti: {data?.tickets?.sold||0}
+Stato:
+<span className="text-green-400 ml-2">
+Attivo
+</span>
 </p>
 
 <p>
-📿 Bracciali attivati: {data?.wristbands?.activated||0}
+Frequenza:
+Ogni lunedì
 </p>
 
 <p>
-💳 Ricariche wallet: €{data?.wallet?.topups||0}
+Ultimo invio:
+Non disponibile
+</p>
+
+<div className="flex gap-3 pt-3">
+
+<button
+onClick={generateReport}
+disabled={reportLoading}
+className="bg-violet-600 px-4 py-2 rounded-xl"
+>
+Genera ora
+</button>
+
+<button
+onClick={sendTestReport}
+disabled={reportLoading}
+className="bg-zinc-700 px-4 py-2 rounded-xl"
+>
+Invia test
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<div className="bg-[#17181D] rounded-2xl p-6 border border-white/5">
+
+<h2 className="text-xl font-bold mb-5">
+📊 KPI Evento
+</h2>
+
+<div className="space-y-4 text-gray-300">
+
+<p>
+Attivazione bracciali:
+<b className="ml-2 text-white">
+{activation}%
+</b>
 </p>
 
 <p>
-💰 Spesa wallet: €{data?.wallet?.spent||0}
+Spesa media wallet:
+<b className="ml-2 text-white">
+€{((data?.wallet?.spent||0)/(data?.tickets?.sold||1)).toFixed(2)}
+</b>
+</p>
+
+<p>
+Incasso totale:
+<b className="ml-2 text-white">
+€{(data?.tickets?.revenue||0)+(data?.wallet?.topups||0)}
+</b>
 </p>
 
 </div>
+
+</div>
+
 
 </div>
 
