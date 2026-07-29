@@ -1,50 +1,24 @@
 const API_URL="https://infinity-eventos-api.onrender.com";
 
 
-export async function generateReport(){
+export async function getReportEmail(festivalId){
 
 const response=await fetch(
-`${API_URL}/reports/generate`,
-{
-method:"POST"
-}
+`${API_URL}/reports/email/${festivalId}`
 );
 
-
 if(!response.ok)
-throw new Error("Errore generazione report");
-
+throw new Error("Errore caricamento email");
 
 return response.json();
 
 }
 
 
-
-export async function sendTestReport(){
-
-const response=await fetch(
-`${API_URL}/reports/email-test`,
-{
-method:"POST"
-}
-);
-
-
-if(!response.ok)
-throw new Error("Errore invio email");
-
-
-return response.json();
-
-}
-
-
-
-export async function saveReportEmail(email){
+export async function saveReportEmail(festivalId,email){
 
 const response=await fetch(
-`${API_URL}/reports/email`,
+`${API_URL}/reports/email/${festivalId}`,
 {
 method:"POST",
 headers:{
@@ -56,27 +30,42 @@ email
 }
 );
 
-
 if(!response.ok)
 throw new Error("Errore salvataggio email");
-
 
 return response.json();
 
 }
 
 
-
-export async function getReportEmail(){
+export async function generateReport(festivalId){
 
 const response=await fetch(
-`${API_URL}/reports/email`
+`${API_URL}/reports/generate/${festivalId}`,
+{
+method:"POST"
+}
 );
 
+if(!response.ok)
+throw new Error("Errore generazione report");
+
+return response.json();
+
+}
+
+
+export async function sendTestReport(festivalId){
+
+const response=await fetch(
+`${API_URL}/reports/email-test/${festivalId}`,
+{
+method:"POST"
+}
+);
 
 if(!response.ok)
-throw new Error("Errore caricamento email");
-
+throw new Error("Errore invio email");
 
 return response.json();
 
