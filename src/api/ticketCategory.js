@@ -1,5 +1,4 @@
-import {API_URL} from "./config";
-
+const API_URL="https://infinity-eventos-api.onrender.com";
 
 export async function getTicketCategories(festivalId){
 
