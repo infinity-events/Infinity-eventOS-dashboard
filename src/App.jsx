@@ -12,7 +12,6 @@ import WristbandManual from "./pages/WristbandManual";
 import Wallet from "./pages/Wallet";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
-import Entrance from "./pages/Entrance";
 
 
 function Layout(){
@@ -28,7 +27,7 @@ return(
 <Route path="/festivals" element={<Festivals/>}/>
 <Route path="/tickets" element={<Tickets/>}/>
 <Route path="/wristbands" element={<Wristbands/>}/>
-<Route path="/entrance" element={<Entrance/>}/>
+<Route path="/entrance" element={<Navigate to="/participants" replace/>}/>
 <Route path="/participants" element={<Participants/>}/>
 <Route path="/nfc/register" element={<NFCRegister/>}/>
 <Route path="/wristbands/manual" element={<WristbandManual/>}/>

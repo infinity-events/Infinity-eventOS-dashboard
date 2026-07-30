@@ -8,8 +8,7 @@ Radio,
 Users,
 WalletCards,
 ChartBar,
-Settings,
-DoorOpen
+Settings
 } from "lucide-react";
 
 
@@ -37,12 +36,6 @@ icon:Ticket
 name:"Bracciali",
 path:"/wristbands",
 icon:Radio
-},
-
-{
-name:"Ingresso",
-path:"/entrance",
-icon:DoorOpen
 },
 
 {
