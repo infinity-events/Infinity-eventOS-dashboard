@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { NavLink } from "react-router-dom";
 
 import { X } from "lucide-react";
@@ -63,6 +64,38 @@ icon:SettingsIcon
 
 ];
 
+function SidebarNavItem({ item, onClose }) {
+  const iconRef = useRef(null);
+
+  const startIconAnimation = () => iconRef.current?.startAnimation();
+  const stopIconAnimation = () => iconRef.current?.stopAnimation();
+
+  return (
+    <NavLink
+      key={item.name}
+      to={item.path}
+      className={({isActive}) => `
+        flex
+        gap-3
+        items-center
+        p-3
+        rounded-xl
+        transition
+        ${isActive ? "bg-white/10" : "hover:bg-white/5"}
+      `}
+      onClick={onClose}
+      onMouseEnter={startIconAnimation}
+      onMouseLeave={stopIconAnimation}
+      onMouseDown={startIconAnimation}
+      onFocus={startIconAnimation}
+      onBlur={stopIconAnimation}
+    >
+      <item.icon ref={iconRef} size={20} />
+      <span>{item.name}</span>
+    </NavLink>
+  );
+}
+
 
 
 export default function Sidebar({open=false,onClose=()=>{}}){
@@ -112,56 +145,9 @@ invert
 <nav className="space-y-2">
 
 
-{
-
-items.map((item)=>(
-
-
-<NavLink
-
-key={item.name}
-
-to={item.path}
-
-className={({isActive})=>
-
-`
-flex
-gap-3
-items-center
-p-3
-rounded-xl
-transition
-
-${isActive 
-? "bg-white/10"
-: "hover:bg-white/5"
-}
-
-`
-
-}
-onClick={onClose}
-
->
-
-
-<item.icon size={20}/>
-
-
-<span>
-
-{item.name}
-
-</span>
-
-
-</NavLink>
-
-
-))
-
-}
+{items.map((item) => (
+  <SidebarNavItem key={item.name} item={item} onClose={onClose} />
+))}
 
 
 </nav>

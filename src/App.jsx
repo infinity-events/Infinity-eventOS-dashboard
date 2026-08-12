@@ -12,6 +12,11 @@ import WristbandManual from "./pages/WristbandManual";
 import Wallet from "./pages/Wallet";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import Landing from "./pages/Landing";
+import CreateFestivalModal from "./components/CreateFestivalModal";
+import { useAuth } from "./contexts/AuthContext";
+import { useFestival } from "./contexts/FestivalContext";
+import { createFestival } from "./api/festivals";
 
 
 function Layout(){
@@ -26,6 +31,7 @@ return(
 <Header onMenuClick={()=>setMenuOpen(true)}/>
 <main className="min-w-0 p-4 sm:p-8">
 <Routes>
+<Route path="/" element={<Navigate to="/dashboard" replace/>}/>
 <Route path="/dashboard" element={<Dashboard/>}/>
 <Route path="/festivals" element={<Festivals/>}/>
 <Route path="/tickets" element={<Tickets/>}/>
@@ -46,17 +52,28 @@ return(
 
 }
 
+function AuthenticatedApp(){
+  const {loading}=useFestival();
+  const {festivals,addFestival}=useFestival();
+  if(loading)return <div className="min-h-screen bg-[#09090B] text-white flex items-center justify-center">Caricamento dei tuoi festival...</div>;
+  async function handleCreate(data){
+    const created=await createFestival(data);
+    addFestival(created);
+  }
+  return <>
+    <Layout/>
+    {festivals.length===0&&<CreateFestivalModal required create={handleCreate}/>} 
+  </>;
+}
+
 
 export default function App(){
+const {user,loading}=useAuth();
+if(loading)return <div className="min-h-screen bg-[#09090B] text-white flex items-center justify-center">Caricamento...</div>;
+if(!user)return <Landing/>;
 
 return(
-<Routes>
-
-<Route path="/" element={<Navigate to="/dashboard" replace/>}/>
-
-<Route path="/*" element={<Layout/>}/>
-
-</Routes>
+<AuthenticatedApp/>
 )
 
 }

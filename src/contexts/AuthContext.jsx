@@ -1,9 +1,13 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
 
 import { auth } from "../firebase";
 
 import {
-onAuthStateChanged
+GoogleAuthProvider,
+onAuthStateChanged,
+signInWithPopup,
+signOut
 } from "firebase/auth";
 
 
@@ -18,6 +22,15 @@ export function AuthProvider({children}){
 const [user,setUser]=useState(null);
 
 const [loading,setLoading]=useState(true);
+
+async function loginWithGoogle(){
+  const provider=new GoogleAuthProvider();
+  return signInWithPopup(auth,provider);
+}
+
+function logout(){
+  return signOut(auth);
+}
 
 
 
@@ -52,7 +65,9 @@ return (
 
 value={{
 user,
-loading
+loading,
+loginWithGoogle,
+logout
 }}
 
 >

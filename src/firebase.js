@@ -3,13 +3,13 @@ import { getAuth } from "firebase/auth";
 
 
 const firebaseConfig = {
-        apiKey: "AIzaSyAreXtr2VRoi9FrPR1PSNhrM1qfWyzpYqw",
-        authDomain: "sample-firebase-ai-app-be9db.firebaseapp.com",
-        projectId: "sample-firebase-ai-app-be9db",
-        storageBucket: "sample-firebase-ai-app-be9db.firebasestorage.app",
-        messagingSenderId: "301656458329",
-        appId: "1:301656458329:web:fbc1fd553ca2912b9c9d48"
-    };
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
 
 
 

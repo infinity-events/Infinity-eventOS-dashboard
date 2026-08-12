@@ -1,43 +1,16 @@
 import { useEffect,useState } from "react";
 import { useFestival } from "../contexts/FestivalContext";
-import { getFestivals,createFestival } from "../api/festivals";
+import { createFestival } from "../api/festivals";
 import CreateFestivalModal from "../components/CreateFestivalModal";
 import {getAnalytics} from "../api/analytics";
 
 export default function Dashboard(){
 
-const {festival,setFestival}=useFestival();
+const {festival,setFestival,festivals,addFestival}=useFestival();
 const [showModal,setShowModal]=useState(false);
-const [loading,setLoading]=useState(true);
 const [analytics,setAnalytics]=useState(null);
 
-useEffect(()=>{
-loadFestival();
-},[]);
-
-async function loadFestival(){
-
-try{
-
-const data=await getFestivals();
-
-if(data.length>0){
-setFestival(data[0]);
-const stats=await getAnalytics(data[0].id);
-setAnalytics(stats);
-}
-
-}catch(error){
-
-console.error("Errore caricamento festival:",error);
-
-}finally{
-
-setLoading(false);
-
-}
-
-}
+useEffect(()=>{if(festival)getAnalytics(festival.id).then(setAnalytics).catch(console.error)},[festival]);
 
 
 async function handleCreate(data){
@@ -45,8 +18,7 @@ async function handleCreate(data){
 try{
 
 const newFestival=await createFestival(data);
-
-setFestival(newFestival);
+addFestival(newFestival);
 setShowModal(false);
 
 }catch(error){
@@ -58,16 +30,15 @@ console.error("Errore creazione festival:",error);
 }
 
 
-if(loading)
-return <div className="text-white text-xl p-10">Caricamento...</div>;
-
-
 return <div>
 
 <div className="mb-10">
 
 <h1 className="text-4xl font-bold">
-{festival?.name || "Dashboard"}
+<select value={festival?.id||""} onChange={e=>setFestival(festivals.find(item=>item.id===e.target.value))} className="bg-transparent outline-none cursor-pointer max-w-full">
+{festivals.map(item=><option key={item.id} value={item.id} className="bg-[#17181D]">{item.name}</option>)}
+</select>
+<button onClick={()=>setShowModal(true)} className="ml-3 align-middle text-sm px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 transition">+ Nuovo</button>
 </h1>
 
 <p className="text-gray-400 mt-2">

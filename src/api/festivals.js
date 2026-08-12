@@ -11,24 +11,9 @@ export function createFestival(data){
     });
 }
 
-export async function updateFestival(id,data){
-const response=await fetch(
-`https://infinity-eventos-api.onrender.com/festivals/${id}`,
-{
-method:"PATCH",
-
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify(data)
-}
-);
-
-if(!response.ok){
-
-throw new Error(
-"Errore aggiornamento festival"
-);
-}
-return response.json();
+export function updateFestival(id,data){
+return apiRequest(`/festivals/${id}`,{
+    method:"PATCH",
+    body:JSON.stringify(data)
+});
 }
