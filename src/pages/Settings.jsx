@@ -1,6 +1,7 @@
-import {useState} from "react";
+import {useRef,useState} from "react";
 import {useFestival} from "../contexts/FestivalContext";
 import {updateFestival} from "../api/festivals";
+import {Archive, Check, ChevronRight, LoaderCircle} from "lucide-react";
 
 export default function Settings(){
 
@@ -19,6 +20,11 @@ location:festival?.location || "",
 status:festival?.status || "BOZZA"
 
 });
+
+const [archiveOpen,setArchiveOpen]=useState(false);
+const [archiveProgress,setArchiveProgress]=useState(0);
+const archiveProgressRef=useRef(0);
+const [archiving,setArchiving]=useState(false);
 
 
 function handleChange(e){
@@ -49,6 +55,39 @@ async function save(){
     error
     );
     }
+}
+
+function startArchive(event){
+    if(archiving)return;
+    const startX=event.clientX;
+    const move=(moveEvent)=>{
+        const distance=Math.max(0,Math.min(240,moveEvent.clientX-startX));
+        const progress=distance/240;
+        archiveProgressRef.current=progress;
+        setArchiveProgress(progress);
+    };
+    const end=async()=>{
+        document.removeEventListener("pointermove",move);
+        document.removeEventListener("pointerup",end);
+        if(archiveProgressRef.current>=0.85){
+            setArchiving(true);
+            try{
+                const updated=await updateFestival(festival.id,{status:"CHIUSO"});
+                setFestival(updated);
+                setArchiveOpen(false);
+                archiveProgressRef.current=0;
+                setArchiveProgress(0);
+            }catch(error){
+                console.error("Errore archiviazione:",error);
+                alert("Non è stato possibile archiviare l'evento.");
+            }finally{setArchiving(false);}
+        }else{
+            archiveProgressRef.current=0;
+            setArchiveProgress(0);
+        }
+    };
+    document.addEventListener("pointermove",move);
+    document.addEventListener("pointerup",end,{once:true});
 }
 
 return <div>
@@ -216,11 +255,20 @@ Zona pericolosa
 </h2>
 
 
-<button className="w-full bg-red-500/20 text-red-400 rounded-xl p-3">
-
+{!archiveOpen ? <button onClick={()=>setArchiveOpen(true)} className="w-full bg-red-500/20 text-red-400 rounded-xl p-3 flex items-center justify-center gap-2 hover:bg-red-500/30 transition">
+<Archive size={18}/>
 Archivia evento
-
+</button> : <div>
+<p className="text-sm text-gray-300 mb-3">Scorri per confermare l’archiviazione dell’evento.</p>
+<div className="relative h-14 rounded-xl bg-red-500/10 border border-red-500/20 overflow-hidden select-none touch-none">
+<div className="absolute inset-y-0 left-0 bg-red-500/30 transition-[width]" style={{width:`${Math.max(16,archiveProgress*100)}%`}}/>
+<button type="button" disabled={archiving} onPointerDown={startArchive} className="absolute top-1 left-1 h-12 w-12 rounded-lg bg-red-500 text-white flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing disabled:opacity-70">
+{archiving?<LoaderCircle size={20} className="animate-spin"/>:archiveProgress>=0.85?<Check size={20}/>:<ChevronRight size={22}/>}
 </button>
+<span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-red-200 pointer-events-none">Scorri →</span>
+</div>
+<button type="button" onClick={()=>{setArchiveOpen(false);archiveProgressRef.current=0;setArchiveProgress(0)}} className="w-full mt-3 text-sm text-gray-500 hover:text-white transition">Annulla</button>
+</div>}
 
 
 </div>
