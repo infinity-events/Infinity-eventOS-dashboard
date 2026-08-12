@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {BadgeCheck,Clock,Keyboard,RefreshCw,ScanLine,Search,ShieldAlert,Wifi,X} from "lucide-react";
-import {Html5QrcodeScanner} from "html5-qrcode";
+import {Html5Qrcode} from "html5-qrcode";
 import {useFestival} from "../contexts/FestivalContext";
 import {getTickets} from "../api/tickets";
 import {checkManualEntrance,checkNfcEntrance,checkQrEntrance,getEntranceLogs} from "../api/entrance";
@@ -52,12 +52,30 @@ function startQrScanner(){
   if(scannerRef.current)return;
   setScannerOpen(true);
   setTimeout(()=>{
-    const scanner=new Html5QrcodeScanner("qr-reader",{fps:10,qrbox:{width:250,height:250},rememberLastUsedCamera:true});
+    const scanner=new Html5Qrcode("qr-reader");
     scannerRef.current=scanner;
-    scanner.render(code=>{setQrCode(extractQrCode(code));scanner.clear().catch(()=>{});scannerRef.current=null;setScannerOpen(false);submitEntrance("qr",code)},()=>null);
+    scanner.start(
+      {facingMode:"environment"},
+      {fps:10,qrbox:{width:250,height:250},aspectRatio:1},
+      async code=>{
+        if(scannerRef.current!==scanner)return;
+        scannerRef.current=null;
+        try{await scanner.stop();await scanner.clear()}catch(error){void error}
+        const normalized=extractQrCode(code);
+        setQrCode(normalized);
+        setInfo(`QR letto: ${normalized}`);
+        setScannerOpen(false);
+        submitEntrance("qr",normalized);
+      },
+      ()=>null
+    ).catch(error=>{
+      if(scannerRef.current===scanner)scannerRef.current=null;
+      setScannerOpen(false);
+      setError(error?.message||"Impossibile avviare la fotocamera");
+    });
   },100);
 }
-function closeScanner(){if(scannerRef.current){scannerRef.current.clear().catch(()=>{});scannerRef.current=null}setScannerOpen(false)}
+function closeScanner(){const scanner=scannerRef.current;scannerRef.current=null;if(scanner)scanner.stop().catch(()=>{}).finally(()=>scanner.clear().catch(()=>{}));setScannerOpen(false)}
 async function readNfc(){
   if(!canUseWebNfc){setInfo("NFC non supportato su questo dispositivo");return}
   try{const reader=new window.NDEFReader();await reader.scan();reader.onreading=e=>{const uid=e.serialNumber||"";setNfcUid(uid);submitEntrance("nfc",uid)}}catch{setError("Errore lettura NFC")}
@@ -102,5 +120,6 @@ function extractQrCode(value){
   const raw=String(value??"").trim();if(!raw)return "";
   try{const parsed=JSON.parse(raw);if(typeof parsed==="string")return parsed.trim();const candidate=parsed.code||parsed.ticketCode||parsed.ticket?.code||parsed.value;if(candidate)return String(candidate).trim()}catch(error){void error}
   try{const url=new URL(raw);for(const key of ["code","ticket","ticketCode","ticket_code"]){const candidate=url.searchParams.get(key);if(candidate)return candidate.trim()}const lastSegment=decodeURIComponent(url.pathname.split("/").filter(Boolean).pop()||"");if(lastSegment.startsWith("VF-"))return lastSegment}catch(error){void error}
-  return raw;
+  const ticketCode=raw.match(/VF-\d{4}-[A-Z0-9]{6}/i)?.[0];
+  return ticketCode||raw;
 }
