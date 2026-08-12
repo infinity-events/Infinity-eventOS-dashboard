@@ -12,55 +12,65 @@ Settings,
 X
 } from "lucide-react";
 
+import AnimatedSidebarIcon from "./AnimatedSidebarIcon";
+
 
 const items=[
 
 {
 name:"Dashboard",
 path:"/dashboard",
-icon:Home
+icon:Home,
+iconName:"home"
 },
 
 {
 name:"Festival",
 path:"/festivals",
-icon:Calendar
+icon:Calendar,
+iconName:"calendar"
 },
 
 {
 name:"Biglietti",
 path:"/tickets",
-icon:Ticket
+icon:Ticket,
+iconName:"ticket"
 },
 
 {
 name:"Bracciali",
 path:"/wristbands",
-icon:Radio
+icon:Radio,
+iconName:"radio"
 },
 
 {
 name:"Partecipanti",
 path:"/participants",
-icon:Users
+icon:Users,
+iconName:"users"
 },
 
 {
 name:"Wallet",
 path:"/wallet",
-icon:WalletCards
+icon:WalletCards,
+iconName:"wallet"
 },
 
 {
 name:"Analytics",
 path:"/analytics",
-icon:ChartBar
+icon:ChartBar,
+iconName:"analytics"
 },
 
 {
 name:"Impostazioni",
 path:"/settings",
-icon:Settings
+icon:Settings,
+iconName:"settings"
 }
 
 ];
@@ -148,7 +158,7 @@ onClick={onClose}
 >
 
 
-<item.icon size={20}/>
+<AnimatedSidebarIcon icon={item.icon} name={item.iconName} size={20}/>
 
 
 <span>
