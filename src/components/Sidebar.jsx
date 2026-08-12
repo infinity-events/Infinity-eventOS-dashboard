@@ -1,18 +1,14 @@
 import { NavLink } from "react-router-dom";
 
-import {
-Home,
-Calendar,
-Ticket,
-Radio,
-Users,
-WalletCards,
-ChartBar,
-Settings,
-X
-} from "lucide-react";
-
-import AnimatedSidebarIcon from "./AnimatedSidebarIcon";
+import { X } from "lucide-react";
+import { HomeIcon } from "./icons/home";
+import { CalendarDaysIcon } from "./icons/calendar-days";
+import { TicketIcon } from "./icons/ticket";
+import { RadioIcon } from "./icons/radio";
+import { UsersIcon } from "./icons/users";
+import { WalletIcon } from "./icons/wallet";
+import { ChartColumnIncreasingIcon } from "./icons/chart-column-increasing";
+import { SettingsIcon } from "./icons/settings";
 
 
 const items=[
@@ -20,57 +16,49 @@ const items=[
 {
 name:"Dashboard",
 path:"/dashboard",
-icon:Home,
-iconName:"home"
+icon:HomeIcon
 },
 
 {
 name:"Festival",
 path:"/festivals",
-icon:Calendar,
-iconName:"calendar"
+icon:CalendarDaysIcon
 },
 
 {
 name:"Biglietti",
 path:"/tickets",
-icon:Ticket,
-iconName:"ticket"
+icon:TicketIcon
 },
 
 {
 name:"Bracciali",
 path:"/wristbands",
-icon:Radio,
-iconName:"radio"
+icon:RadioIcon
 },
 
 {
 name:"Partecipanti",
 path:"/participants",
-icon:Users,
-iconName:"users"
+icon:UsersIcon
 },
 
 {
 name:"Wallet",
 path:"/wallet",
-icon:WalletCards,
-iconName:"wallet"
+icon:WalletIcon
 },
 
 {
 name:"Analytics",
 path:"/analytics",
-icon:ChartBar,
-iconName:"analytics"
+icon:ChartColumnIncreasingIcon
 },
 
 {
 name:"Impostazioni",
 path:"/settings",
-icon:Settings,
-iconName:"settings"
+icon:SettingsIcon
 }
 
 ];
@@ -158,7 +146,7 @@ onClick={onClose}
 >
 
 
-<AnimatedSidebarIcon icon={item.icon} name={item.iconName} size={20}/>
+<item.icon size={20}/>
 
 
 <span>
