@@ -73,7 +73,7 @@ async function generate(){
 try{
 setReportLoading(true);
 await createReport(festival.id);
-alert("Report generato");
+alert("Report generato e inviato via email");
 }catch(error){
 console.error(error);
 alert("Errore generazione report");
