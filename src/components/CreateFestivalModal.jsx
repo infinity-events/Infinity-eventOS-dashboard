@@ -10,9 +10,9 @@ endDate:""
 });
 
 
-return <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
+return <div className="fixed inset-0 z-50 bg-black/70 p-4 flex items-center justify-center">
 
-<div className="bg-[#17181D] p-8 rounded-3xl w-[450px]">
+<div className="bg-[#17181D] p-5 sm:p-8 rounded-3xl w-full max-w-[450px] max-h-[calc(100vh-2rem)] overflow-y-auto">
 
 <h2 className="text-2xl font-bold mb-6">
 Crea festival

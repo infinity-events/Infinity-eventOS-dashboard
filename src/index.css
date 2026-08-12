@@ -10,10 +10,90 @@ background:#09090B;
 .input{
 
 width:100%;
+min-width:0;
+box-sizing:border-box;
 background:#09090B;
 padding:15px;
 border-radius:12px;
 margin-top:15px;
 color:white;
 
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 767px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  h1.text-4xl,
+  h1.text-5xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+
+  h2.text-3xl {
+    font-size: 1.75rem;
+    line-height: 2rem;
+  }
+
+  .grid.grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid.grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grid.grid-cols-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 620px;
+  }
+
+  .fixed.inset-0 > [class*="w-["] {
+    width: calc(100vw - 2rem);
+  }
+
+  #qr-reader {
+    width: 100% !important;
+  }
+
+  #qr-reader video {
+    width: 100% !important;
+    height: auto !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .grid.grid-cols-4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .input {
+    padding: 13px 12px;
+  }
+
+  .p-6 {
+    padding: 1.25rem;
+  }
+
+  .p-8 {
+    padding: 1.25rem;
+  }
 }

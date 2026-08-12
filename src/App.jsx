@@ -1,7 +1,7 @@
+import {useState} from "react";
 import {Routes,Route,Navigate} from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-
-import DashboardLayout from "./layouts/DashboardLayout";
+import Header from "./components/Header";
 import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
 import Wristbands from "./pages/Wristbands";
@@ -15,13 +15,16 @@ import Settings from "./pages/Settings";
 
 
 function Layout(){
+const [menuOpen,setMenuOpen]=useState(false);
 
 return(
-<div className="flex min-h-screen bg-black text-white">
+<div className="flex min-h-screen overflow-x-hidden bg-black text-white">
 
-<Sidebar/>
+<Sidebar open={menuOpen} onClose={()=>setMenuOpen(false)}/>
 
-<main className="flex-1 p-8">
+<div className="min-w-0 flex-1">
+<Header onMenuClick={()=>setMenuOpen(true)}/>
+<main className="min-w-0 p-4 sm:p-8">
 <Routes>
 <Route path="/dashboard" element={<Dashboard/>}/>
 <Route path="/festivals" element={<Festivals/>}/>
@@ -36,6 +39,7 @@ return(
 <Route path="/settings" element={<Settings/>}/>
 </Routes>
 </main>
+</div>
 
 </div>
 )
