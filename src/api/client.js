@@ -54,10 +54,14 @@ Authorization:
 
 
 if(!response.ok){
-
-throw new Error(
-"API Error: "+response.status
-);
+let message="API Error: "+response.status;
+try{
+const data=await response.json();
+message=data?.message||data?.error||message;
+}catch{
+// Il backend potrebbe non restituire un corpo JSON.
+}
+throw new Error(message);
 
 }
 
