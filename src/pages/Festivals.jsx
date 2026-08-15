@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useFestival } from "../contexts/FestivalContext";
 import { updateFestival } from "../api/festivals";
+import { getTickets } from "../api/tickets";
+import { getTicketCategories } from "../api/ticketCategory";
 
 const statusConfig = {
   ATTIVO: { label: "Attivo", tone: "text-emerald-300 bg-emerald-400/10 border-emerald-400/20" },
@@ -45,6 +47,23 @@ export default function Festivals() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", location: "" });
+  const [setupData, setSetupData] = useState({ festivalId: null, categories: null, tickets: null });
+
+  useEffect(() => {
+    let active = true;
+    if (!festival?.id) return undefined;
+
+    Promise.allSettled([getTicketCategories(festival.id), getTickets(festival.id)]).then(([categoriesResult, ticketsResult]) => {
+      if (!active) return;
+      setSetupData({
+        festivalId: festival.id,
+        categories: categoriesResult.status === "fulfilled" && Array.isArray(categoriesResult.value) ? categoriesResult.value : [],
+        tickets: ticketsResult.status === "fulfilled" && Array.isArray(ticketsResult.value) ? ticketsResult.value : [],
+      });
+    });
+
+    return () => { active = false; };
+  }, [festival?.id]);
 
   const status = getStatus(festival?.status);
   const eventDates = useMemo(() => {
@@ -85,8 +104,8 @@ export default function Festivals() {
 
   const setupItems = [
     { label: "Dettagli evento", done: Boolean(festival.name && festival.location), icon: CalendarDays },
-    { label: "Categorie biglietti", done: Boolean(festival.tickets?.length), icon: Ticket },
-    { label: "Accessi e partecipanti", done: false, icon: Users },
+    { label: "Categorie biglietti", done: setupData.festivalId === festival.id && Boolean(setupData.categories?.length), icon: Ticket },
+    { label: "Accessi e partecipanti", done: setupData.festivalId === festival.id && Boolean(setupData.tickets?.length), icon: Users },
   ];
   const completedSetup = setupItems.filter((item) => item.done).length;
 
