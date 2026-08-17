@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {BadgeCheck,Clock,Keyboard,RefreshCw,ScanLine,Search,ShieldAlert,Wifi,X} from "lucide-react";
-import {Html5Qrcode} from "html5-qrcode";
+import {Html5Qrcode,Html5QrcodeSupportedFormats} from "html5-qrcode";
 import {useFestival} from "../contexts/FestivalContext";
 import {getTickets} from "../api/tickets";
 import {checkManualEntrance,checkNfcEntrance,checkQrEntrance,getEntranceLogs} from "../api/entrance";
@@ -57,7 +57,7 @@ function startQrScanner(){
     scannerRef.current=scanner;
     scanner.start(
       {facingMode:"environment"},
-      {fps:10,qrbox:{width:250,height:250},aspectRatio:1},
+      {fps:10,qrbox:(viewfinderWidth,viewfinderHeight)=>{const size=Math.floor(Math.min(viewfinderWidth,viewfinderHeight)*0.8);return {width:size,height:size}},aspectRatio:1,formatsToSupport:[Html5QrcodeSupportedFormats.QR_CODE],disableFlip:false},
       async code=>{
         if(scannerRef.current!==scanner)return;
         scannerRef.current=null;
