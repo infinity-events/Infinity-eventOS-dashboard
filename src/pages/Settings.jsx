@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Archive,
@@ -13,9 +13,11 @@ import {
   LoaderCircle,
   MapPin,
   Ticket,
+  CreditCard,
 } from "lucide-react";
 import { useFestival } from "../contexts/FestivalContext";
 import { updateFestival } from "../api/festivals";
+import { getStripeStatus, startStripeConnect } from "../api/stripe";
 
 const statusOptions = [
   { value: "BOZZA", label: "Bozza", description: "L’evento è in preparazione e non è ancora operativo.", color: "text-amber-300", background: "bg-amber-400/10 border-amber-400/20" },
@@ -45,6 +47,12 @@ export default function Settings() {
   const [archiveProgress, setArchiveProgress] = useState(0);
   const archiveProgressRef = useRef(0);
   const [archiving, setArchiving] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
+
+  useEffect(() => {
+    if (festival?.id) getStripeStatus(festival.id).then(setStripeStatus).catch(() => setStripeStatus({ connected: false }));
+  }, [festival?.id]);
 
   if (!festival) {
     return <div className="rounded-3xl border border-white/10 bg-[#17181D] p-8 text-white"><h1 className="text-3xl font-bold">Nessun festival selezionato</h1><p className="mt-2 text-gray-400">Seleziona o crea un festival per accedere alle impostazioni.</p></div>;
@@ -77,6 +85,18 @@ export default function Settings() {
       setNotice("Non è stato possibile copiare l’ID festival.");
     } finally {
       setCopying(false);
+    }
+  }
+
+  async function connectStripe() {
+    setStripeLoading(true);
+    setNotice("");
+    try {
+      const result = await startStripeConnect(festival.id);
+      window.location.assign(result.url);
+    } catch (error) {
+      setNotice(error.message || "Non è stato possibile aprire Stripe.");
+      setStripeLoading(false);
     }
   }
 
@@ -157,6 +177,13 @@ export default function Settings() {
           <SettingsLink to="/tickets" icon={Ticket} title="Biglietti" text="Categorie, prezzi e disponibilità" />
           <SettingsLink to="/wristbands" icon={Archive} title="Bracciali" text="Attivazioni e stato operativo" />
           <SettingsLink to="/analytics" icon={Clock3} title="Report e analytics" text="Dati e report periodici" />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-purple-400/20 bg-[#17181D] p-6 sm:p-7">
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+          <div className="flex items-start gap-3"><CreditCard size={21} className="mt-0.5 text-purple-300" /><div><h2 className="text-xl font-bold">Pagamenti Stripe</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-gray-400">Collega l’account Stripe dell’azienda per ricevere i pagamenti dei biglietti tramite Checkout.</p>{stripeStatus?.connected ? <p className="mt-3 text-sm font-semibold text-emerald-300">Account collegato e pronto a ricevere pagamenti.</p> : stripeStatus && <p className="mt-3 text-sm text-amber-300">Onboarding da completare.</p>}</div></div>
+          <button type="button" onClick={connectStripe} disabled={stripeLoading} className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 font-semibold transition hover:bg-purple-500 disabled:opacity-60">{stripeLoading && <LoaderCircle size={17} className="animate-spin" />}{stripeStatus?.connected ? "Gestisci Stripe" : "Collega Stripe"}</button>
         </div>
       </section>
 
