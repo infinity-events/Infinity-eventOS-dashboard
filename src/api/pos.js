@@ -5,8 +5,7 @@ async function handleResponse(response) {
 
   if (!response.ok) {
     throw new Error(
-      data?.message ||
-        'Si è verificato un errore',
+      data?.message || 'Si è verificato un errore',
     );
   }
 
@@ -17,9 +16,7 @@ async function handleResponse(response) {
 // PRODUCTS
 // ============================================================
 
-export async function getPosProducts(
-  festivalId,
-) {
+export async function getPosProducts(festivalId) {
   const response = await fetch(
     `${API_URL}/pos/products/${festivalId}`,
   );
@@ -27,19 +24,14 @@ export async function getPosProducts(
   return handleResponse(response);
 }
 
-export async function createPosProduct(
-  product,
-) {
+export async function createPosProduct(product) {
   const response = await fetch(
     `${API_URL}/pos/products`,
     {
       method: 'POST',
-
       headers: {
-        'Content-Type':
-          'application/json',
+        'Content-Type': 'application/json',
       },
-
       body: JSON.stringify(product),
     },
   );
@@ -55,12 +47,9 @@ export async function updatePosProduct(
     `${API_URL}/pos/products/${productId}`,
     {
       method: 'PATCH',
-
       headers: {
-        'Content-Type':
-          'application/json',
+        'Content-Type': 'application/json',
       },
-
       body: JSON.stringify(product),
     },
   );
@@ -79,12 +68,9 @@ export async function createPosTransaction(
     `${API_URL}/pos/transactions`,
     {
       method: 'POST',
-
       headers: {
-        'Content-Type':
-          'application/json',
+        'Content-Type': 'application/json',
       },
-
       body: JSON.stringify(transaction),
     },
   );

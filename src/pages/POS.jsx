@@ -6,11 +6,18 @@ import {
   Plus,
   ShoppingCart,
   Trash2,
+  Package,
+  X,
+  Pencil,
+  Power,
+  PlusCircle,
 } from 'lucide-react';
 
 import {
+  createPosProduct,
   createPosTransaction,
   getPosProducts,
+  updatePosProduct,
 } from '../api/pos';
 
 import { useFestival } from '../contexts/FestivalContext';
@@ -34,6 +41,24 @@ export default function POS() {
     useState(true);
 
   const [paying, setPaying] =
+    useState(false);
+
+  const [showProductManager, setShowProductManager] =
+  useState(false);
+
+  const [editingProduct, setEditingProduct] =
+    useState(null);
+
+  const [productForm, setProductForm] = useState({
+    name: '',
+    description: '',
+    category: '',
+    price: '',
+    stock: '',
+    imageUrl: '',
+  });
+
+  const [savingProduct, setSavingProduct] =
     useState(false);
 
   // ==========================================================
@@ -89,18 +114,23 @@ export default function POS() {
     ];
   }, [products]);
 
-  const filteredProducts =
-    useMemo(() => {
-      if (category === 'Tutti') {
-        return products;
-      }
+  const activeProducts = useMemo(() => {
+  return products.filter(
+    (product) =>
+      product.status !== 'INACTIVE',
+  );
+}, [products]);
 
-      return products.filter(
-        (product) =>
-          product.category ===
-          category,
-      );
-    }, [products, category]);
+const filteredProducts = useMemo(() => {
+  if (category === 'Tutti') {
+    return activeProducts;
+  }
+
+  return activeProducts.filter(
+    (product) =>
+      product.category === category,
+  );
+}, [activeProducts, category]);
 
   // ==========================================================
   // TOTAL
@@ -305,6 +335,152 @@ export default function POS() {
   }
 
   // ==========================================================
+// PRODUCT MANAGER
+// ==========================================================
+
+function openCreateProduct() {
+  setEditingProduct(null);
+
+  setProductForm({
+    name: '',
+    description: '',
+    category: '',
+    price: '',
+    stock: '',
+    imageUrl: '',
+  });
+
+  setShowProductManager(true);
+}
+
+function openEditProduct(product) {
+  setEditingProduct(product);
+
+  setProductForm({
+    name: product.name || '',
+    description: product.description || '',
+    category: product.category || '',
+    price: product.price ?? '',
+    stock: product.stock ?? '',
+    imageUrl: product.imageUrl || '',
+  });
+
+  setShowProductManager(true);
+}
+
+function closeProductForm() {
+  setEditingProduct(null);
+
+  setProductForm({
+    name: '',
+    description: '',
+    category: '',
+    price: '',
+    stock: '',
+    imageUrl: '',
+  });
+}
+
+async function saveProduct(event) {
+  event.preventDefault();
+
+  if (!selectedFestival?.id) {
+    return;
+  }
+
+  if (!productForm.name.trim()) {
+    alert('Inserisci il nome del prodotto.');
+    return;
+  }
+
+  if (
+    productForm.price === '' ||
+    Number(productForm.price) < 0
+  ) {
+    alert('Inserisci un prezzo valido.');
+    return;
+  }
+
+  if (
+    productForm.stock === '' ||
+    Number(productForm.stock) < 0
+  ) {
+    alert('Inserisci una quantità valida.');
+    return;
+  }
+
+  try {
+    setSavingProduct(true);
+
+    const payload = {
+      festivalId: selectedFestival.id,
+      name: productForm.name.trim(),
+      description:
+        productForm.description.trim() || null,
+      category:
+        productForm.category.trim() || null,
+      price: Number(productForm.price),
+      stock: Number(productForm.stock),
+      imageUrl:
+        productForm.imageUrl.trim() || null,
+    };
+
+    if (editingProduct) {
+      await updatePosProduct(
+        editingProduct.id,
+        payload,
+      );
+    } else {
+      await createPosProduct(payload);
+    }
+
+    await loadProducts();
+
+    closeProductForm();
+  } catch (error) {
+    console.error(
+      'Errore salvataggio prodotto:',
+      error,
+    );
+
+    alert(
+      error.message ||
+        'Impossibile salvare il prodotto.',
+    );
+  } finally {
+    setSavingProduct(false);
+  }
+}
+
+async function toggleProduct(product) {
+  const newStatus =
+    product.status === 'ACTIVE'
+      ? 'INACTIVE'
+      : 'ACTIVE';
+
+  try {
+    await updatePosProduct(
+      product.id,
+      {
+        status: newStatus,
+      },
+    );
+
+    await loadProducts();
+  } catch (error) {
+    console.error(
+      'Errore modifica stato prodotto:',
+      error,
+    );
+
+    alert(
+      error.message ||
+        'Impossibile modificare lo stato del prodotto.',
+    );
+  }
+}
+
+  // ==========================================================
   // RENDER
   // ==========================================================
 
@@ -319,13 +495,28 @@ export default function POS() {
 
         <header className="pos-header">
 
-          <div>
-            <h1>POS</h1>
+        <div>
+          <h1>POS</h1>
 
-            <p>
-              Gestione vendite
-            </p>
-          </div>
+          <p>
+            Gestione vendite
+          </p>
+        </div>
+
+        <div className="pos-header-actions">
+
+          <button
+            className="manage-products-button"
+            onClick={() => {
+              setShowProductManager(true);
+              setEditingProduct(null);
+            }}
+          >
+            <Package size={18} />
+            Gestisci prodotti
+          </button>
+
+        </div>
 
           <div className="pos-categories">
 
@@ -627,6 +818,378 @@ export default function POS() {
         </footer>
 
       </aside>
+
+                {showProductManager && (
+  <div className="product-manager-overlay">
+
+    <div className="product-manager">
+
+      <header className="product-manager-header">
+
+        <div>
+          <h2>Gestisci prodotti</h2>
+
+          <p>
+            Crea e gestisci i prodotti del POS
+          </p>
+        </div>
+
+        <button
+          className="close-manager"
+          onClick={() => {
+            setShowProductManager(false);
+            closeProductForm();
+          }}
+        >
+          <X size={20} />
+        </button>
+
+      </header>
+
+      <div className="product-manager-content">
+
+        <div className="manager-toolbar">
+
+          <strong>
+            {products.length}{' '}
+            {products.length === 1
+              ? 'prodotto'
+              : 'prodotti'}
+          </strong>
+
+          <button
+            className="new-product-button"
+            onClick={openCreateProduct}
+          >
+            <PlusCircle size={18} />
+            Nuovo prodotto
+          </button>
+
+        </div>
+
+        {!editingProduct &&
+        productForm.name === '' ? (
+          <div className="manager-products-list">
+
+            {products.length === 0 ? (
+              <div className="manager-empty">
+
+                <Package size={42} />
+
+                <h3>
+                  Nessun prodotto
+                </h3>
+
+                <p>
+                  Crea il primo prodotto
+                  del tuo POS.
+                </p>
+
+              </div>
+            ) : (
+              products.map((product) => (
+                <div
+                  className={`manager-product ${
+                    product.status ===
+                    'INACTIVE'
+                      ? 'inactive'
+                      : ''
+                  }`}
+                  key={product.id}
+                >
+
+                  <div className="manager-product-image">
+
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                      />
+                    ) : (
+                      <Package
+                        size={28}
+                      />
+                    )}
+
+                  </div>
+
+                  <div className="manager-product-info">
+
+                    <strong>
+                      {product.name}
+                    </strong>
+
+                    <span>
+                      {product.category ||
+                        'Senza categoria'}
+                    </span>
+
+                    <small>
+                      €{' '}
+                      {Number(
+                        product.price,
+                      ).toFixed(2)}{' '}
+                      ·{' '}
+                      {product.stock}{' '}
+                      disponibili
+                    </small>
+
+                  </div>
+
+                  <div className="manager-product-actions">
+
+                    <button
+                      onClick={() =>
+                        openEditProduct(
+                          product,
+                        )
+                      }
+                    >
+                      <Pencil
+                        size={17}
+                      />
+                      Modifica
+                    </button>
+
+                    <button
+                      className={
+                        product.status ===
+                        'ACTIVE'
+                          ? 'danger'
+                          : 'success'
+                      }
+                      onClick={() =>
+                        toggleProduct(
+                          product,
+                        )
+                      }
+                    >
+                      <Power
+                        size={17}
+                      />
+
+                      {product.status ===
+                      'ACTIVE'
+                        ? 'Disattiva'
+                        : 'Attiva'}
+                    </button>
+
+                  </div>
+
+                </div>
+              ))
+            )}
+
+          </div>
+        ) : (
+          <form
+            className="product-form"
+            onSubmit={saveProduct}
+          >
+
+            <div className="product-form-header">
+
+              <div>
+                <h3>
+                  {editingProduct
+                    ? 'Modifica prodotto'
+                    : 'Nuovo prodotto'}
+                </h3>
+
+                <p>
+                  Inserisci i dati del
+                  prodotto.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  closeProductForm
+                }
+              >
+                Annulla
+              </button>
+
+            </div>
+
+            <div className="product-form-grid">
+
+              <label>
+                Nome prodotto
+
+                <input
+                  type="text"
+                  value={
+                    productForm.name
+                  }
+                  onChange={(event) =>
+                    setProductForm(
+                      (current) => ({
+                        ...current,
+                        name: event.target
+                          .value,
+                      }),
+                    )
+                  }
+                  placeholder="Es. Coca-Cola"
+                />
+              </label>
+
+              <label>
+                Categoria
+
+                <input
+                  type="text"
+                  value={
+                    productForm.category
+                  }
+                  onChange={(event) =>
+                    setProductForm(
+                      (current) => ({
+                        ...current,
+                        category:
+                          event.target
+                            .value,
+                      }),
+                    )
+                  }
+                  placeholder="Es. Bevande"
+                />
+              </label>
+
+              <label>
+                Prezzo
+
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={
+                    productForm.price
+                  }
+                  onChange={(event) =>
+                    setProductForm(
+                      (current) => ({
+                        ...current,
+                        price:
+                          event.target
+                            .value,
+                      }),
+                    )
+                  }
+                  placeholder="3.00"
+                />
+              </label>
+
+              <label>
+                Quantità
+
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={
+                    productForm.stock
+                  }
+                  onChange={(event) =>
+                    setProductForm(
+                      (current) => ({
+                        ...current,
+                        stock:
+                          event.target
+                            .value,
+                      }),
+                    )
+                  }
+                  placeholder="100"
+                />
+              </label>
+
+              <label className="full">
+                URL immagine
+
+                <input
+                  type="url"
+                  value={
+                    productForm.imageUrl
+                  }
+                  onChange={(event) =>
+                    setProductForm(
+                      (current) => ({
+                        ...current,
+                        imageUrl:
+                          event.target
+                            .value,
+                      }),
+                    )
+                  }
+                  placeholder="https://..."
+                />
+              </label>
+
+              <label className="full">
+                Descrizione
+
+                <textarea
+                  value={
+                    productForm.description
+                  }
+                  onChange={(event) =>
+                    setProductForm(
+                      (current) => ({
+                        ...current,
+                        description:
+                          event.target
+                            .value,
+                      }),
+                    )
+                  }
+                  placeholder="Descrizione opzionale"
+                  rows={3}
+                />
+              </label>
+
+            </div>
+
+            {productForm.imageUrl && (
+              <div className="product-preview">
+
+                <span>
+                  Anteprima
+                </span>
+
+                <img
+                  src={
+                    productForm.imageUrl
+                  }
+                  alt="Anteprima"
+                />
+
+              </div>
+            )}
+
+            <button
+              className="save-product-button"
+              type="submit"
+              disabled={savingProduct}
+            >
+              {savingProduct
+                ? 'Salvataggio...'
+                : editingProduct
+                  ? 'Salva modifiche'
+                  : 'Crea prodotto'}
+            </button>
+
+          </form>
+        )}
+
+      </div>
+
+    </div>
+
+  </div>
+)}
 
     </div>
   );
