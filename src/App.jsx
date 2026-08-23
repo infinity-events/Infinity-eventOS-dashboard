@@ -10,6 +10,7 @@ import NFCRegister from "./pages/NFCRegister";
 import Participants from "./pages/Participants";
 import WristbandManual from "./pages/WristbandManual";
 import Wallet from "./pages/Wallet";
+import POS from './pages/POS';
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Landing from "./pages/Landing";
@@ -17,6 +18,7 @@ import CreateFestivalModal from "./components/CreateFestivalModal";
 import { useAuth } from "./contexts/AuthContext";
 import { useFestival } from "./contexts/FestivalContext";
 import { createFestival } from "./api/festivals";
+
 
 
 function Layout(){
@@ -41,6 +43,7 @@ return(
 <Route path="/nfc/register" element={<NFCRegister/>}/>
 <Route path="/wristbands/manual" element={<WristbandManual/>}/>
 <Route path="/wallet" element={<Wallet/>}/>
+<Route path="/pos" element={<POS/>}/>
 <Route path="/analytics" element={<Analytics/>}/>
 <Route path="/settings" element={<Settings/>}/>
 </Routes>
