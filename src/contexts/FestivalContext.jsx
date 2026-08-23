@@ -10,6 +10,7 @@ export function FestivalProvider({children}){
 const [festival,setFestivalState]=useState(
 JSON.parse(localStorage.getItem("festival")) || null
 );
+
 const [festivals,setFestivals]=useState([]);
 const [loading,setLoading]=useState(true);
 const {user}=useAuth();
