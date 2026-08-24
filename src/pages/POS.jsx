@@ -45,6 +45,9 @@ export default function POS() {
   const [showProductManager, setShowProductManager] =
   useState(false);
 
+  const [showProductForm, setShowProductForm] =
+    useState(false);
+
   const [editingProduct, setEditingProduct] =
     useState(null);
 
