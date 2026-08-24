@@ -24,7 +24,7 @@ import { useFestival } from '../contexts/FestivalContext';
 import './POS.css';
 
 export default function POS() {
-  const { selectedFestival } = useFestival();
+  const { festival } = useFestival();
   console.log('POS selectedFestival:', selectedFestival);
 
   // ==========================================================
@@ -75,7 +75,7 @@ export default function POS() {
   // ==========================================================
 
   async function loadProducts() {
-    if (!selectedFestival?.id) {
+    if (!festival?.id) {
       setProducts([]);
       setLoading(false);
       return;
@@ -85,7 +85,7 @@ export default function POS() {
       setLoading(true);
 
       const data = await getPosProducts(
-        selectedFestival.id,
+        festival.id,
       );
 
       setProducts(Array.isArray(data) ? data : []);
@@ -103,7 +103,7 @@ export default function POS() {
 
   useEffect(() => {
     loadProducts();
-  }, [selectedFestival?.id]);
+  }, [festival?.id]);
 
   // ==========================================================
   // CATEGORIES
@@ -320,7 +320,7 @@ export default function POS() {
   // ==========================================================
 
   async function saveProduct() {
-    if (!selectedFestival?.id) {
+    if (!festival?.id) {
       alert(
         'Nessun festival selezionato.',
       );
@@ -362,7 +362,7 @@ export default function POS() {
 
       const payload = {
         festivalId:
-          selectedFestival.id,
+          festival.id,
 
         name,
 
@@ -426,7 +426,7 @@ export default function POS() {
     if (
       !cart.length ||
       paying ||
-      !selectedFestival?.id
+      !festival?.id
     ) {
       return;
     }
@@ -436,7 +436,7 @@ export default function POS() {
 
       await createPosTransaction({
         festivalId:
-          selectedFestival.id,
+          festival.id,
 
         paymentMethod: 'CASH',
 
