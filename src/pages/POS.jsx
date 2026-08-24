@@ -25,7 +25,6 @@ import './POS.css';
 
 export default function POS() {
   const { festival } = useFestival();
-  console.log('POS festival:', festival);
 
   // ==========================================================
   // PRODUCTS
