@@ -623,52 +623,25 @@ async function toggleProduct(product) {
       <main className="pos-main">
 
         <header className="pos-header">
+          <div>
+            <h1>POS</h1>
+            <p>
+              Gestione vendite
+            </p>
+          </div>
 
-        <div>
-          <h1>POS</h1>
+          <div className="pos-header-actions">
 
-          <p>
-            Gestione vendite
-          </p>
-        </div>
+            <button
+              className="manage-products-button"
+              onClick={() =>
+                setShowProductManager(true)
+              }
+            >
+              <Settings size={17} />
 
-        <div className="pos-header-actions">
-
-          <button
-            className="manage-products-button"
-            onClick={() => {
-              setShowProductManager(true);
-              setEditingProduct(null);
-            }}
-          >
-            <Package size={18} />
-            Gestisci prodotti
-          </button>
-
-        </div>
-
-          <div className="pos-categories">
-
-            {categories.map(
-              (item) => (
-                <button
-                  key={item}
-                  className={
-                    category ===
-                    item
-                      ? 'active'
-                      : ''
-                  }
-                  onClick={() =>
-                    setCategory(
-                      item,
-                    )
-                  }
-                >
-                  {item}
-                </button>
-              ),
-            )}
+              Gestisci prodotti
+            </button>
 
           </div>
 
