@@ -6,11 +6,10 @@ import {
   Plus,
   ShoppingCart,
   Trash2,
-  Package,
+  Settings,
   X,
-  Pencil,
-  Power,
   PlusCircle,
+  Pencil,
 } from 'lucide-react';
 
 import {
