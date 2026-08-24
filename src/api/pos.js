@@ -24,7 +24,26 @@ export async function getPosProducts(festivalId) {
   return handleResponse(response);
 }
 
+// export async function createPosProduct(product) {
+//   const response = await fetch(
+//     `${API_URL}/pos/products`,
+//     {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify(product),
+//     },
+//   );
+
+//   return handleResponse(response);
+// }
+
 export async function createPosProduct(product) {
+  console.log('POS API URL:', API_URL);
+  console.log('POST URL:', `${API_URL}/pos/products`);
+  console.log('PRODUCT:', product);
+
   const response = await fetch(
     `${API_URL}/pos/products`,
     {
@@ -35,6 +54,9 @@ export async function createPosProduct(product) {
       body: JSON.stringify(product),
     },
   );
+
+  console.log('POST STATUS:', response.status);
+  console.log('POST RESPONSE:', await response.clone().text());
 
   return handleResponse(response);
 }
