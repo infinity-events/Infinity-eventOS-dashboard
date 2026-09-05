@@ -1,64 +1,138 @@
-export default function NFCScanner({onScan}){
+import { Capacitor } from "@capacitor/core";
+import { CapacitorNfc } from "@capgo/capacitor-nfc";
 
-async function startScan(){
+export default function NFCScanner({ onScan }) {
 
-if(!("NDEFReader" in window)){
+  async function startScan() {
 
-alert("Questo dispositivo non supporta NFC");
-return;
+    // ==========================================
+    // APP NATIVA ANDROID / IOS
+    // ==========================================
 
-}
+    if (Capacitor.isNativePlatform()) {
 
-try{
+      try {
 
-const ndef=new window.NDEFReader();
+        const { supported } = await CapacitorNfc.isSupported();
 
-await ndef.scan();
+        if (!supported) {
+          alert("Questo dispositivo non supporta NFC");
+          return;
+        }
 
-alert("Avvicina il braccialetto...");
+        alert("Avvicina il braccialetto al telefono...");
+
+        const listener = await CapacitorNfc.addListener(
+          "nfcEvent",
+          async (event) => {
+
+            console.log("NFC EVENT:", event);
+
+            if (!event.tag?.id) {
+              alert("UID non trovato");
+              return;
+            }
+
+            const uid = event.tag.id
+              .map(byte =>
+                byte
+                  .toString(16)
+                  .padStart(2, "0")
+                  .toUpperCase()
+              )
+              .join("");
+
+            console.log("UID LETTO:", uid);
+
+            await CapacitorNfc.stopScanning();
+            await listener.remove();
+
+            onScan(uid);
+          }
+        );
+
+        await CapacitorNfc.startScanning({
+          iosSessionType: "tag",
+          invalidateAfterFirstRead: true,
+          alertMessage:
+            "Avvicina il braccialetto alla parte superiore del dispositivo."
+        });
+
+      } catch (error) {
+
+        console.error("Errore NFC:", error);
+
+        alert(
+          error?.message ||
+          "Errore durante la lettura NFC"
+        );
+
+      }
+
+      return;
+    }
 
 
-ndef.onreading=(event)=>{
+    // ==========================================
+    // BROWSER / WEB NFC
+    // ==========================================
 
-const serial=event.serialNumber;
+    if (!("NDEFReader" in window)) {
 
-if(!serial){
+      alert("Questo dispositivo non supporta NFC");
+      return;
 
-alert("UID non trovato");
-return;
+    }
 
-}
+    try {
 
-const uid=serial
-.replace(/:/g,'')
-.toUpperCase();
+      const ndef = new window.NDEFReader();
+
+      await ndef.scan();
+
+      alert("Avvicina il braccialetto...");
+
+      ndef.onreading = (event) => {
+
+        const serial = event.serialNumber;
+
+        if (!serial) {
+
+          alert("UID non trovato");
+          return;
+
+        }
+
+        const uid = serial
+          .replace(/:/g, "")
+          .toUpperCase();
+
+        console.log("UID LETTO:", uid);
+
+        onScan(uid);
+
+      };
+
+    } catch (error) {
+
+      console.error("Errore Web NFC:", error);
+
+      alert("Errore durante la lettura NFC");
+
+    }
+
+  }
 
 
-alert("UID LETTO: "+uid);
+  return (
 
-onScan(uid);
+    <button
+      onClick={startScan}
+      className="mt-8 w-full rounded-xl bg-purple-600 p-4 text-white text-lg"
+    >
+      📡 Scansiona braccialetto
+    </button>
 
-};
-
-
-}catch(error){
-
-console.error(error);
-
-alert("Errore durante la lettura NFC");
-
-}
-
-}
-
-
-return(
-<button
-onClick={startScan}
-className="mt-8 w-full rounded-xl bg-purple-600 p-4 text-white text-lg"
->
-📡 Scansiona braccialetto
-</button>
-)
+  );
 
 }
