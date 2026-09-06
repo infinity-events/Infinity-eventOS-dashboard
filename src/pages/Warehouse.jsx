@@ -147,7 +147,7 @@ function downloadAssetLabel(asset) {
     ctx.font = "26px Arial";
 
     ctx.fillText(
-      "INFINITY EVENTOS",
+      "INFINITY EVENTS",
       width / 2,
       1050
     );
