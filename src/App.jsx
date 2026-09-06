@@ -13,6 +13,7 @@ import Wallet from "./pages/Wallet";
 import POS from './pages/POS';
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import Warehouse from "./pages/Warehouse";
 import Landing from "./pages/Landing";
 import CreateFestivalModal from "./components/CreateFestivalModal";
 import { useAuth } from "./contexts/AuthContext";
@@ -170,8 +171,21 @@ return(
     </RoleRoute>
   }
 />
-<Route path="/access-denied" element={<AccessDenied/>}/>
+
+<Route
+  path="/magazzino"
+  element={
+    <RoleRoute allowedRoles={["ADMIN"]}>
+      <Warehouse />
+    </RoleRoute>
+  }
+/>
+
+<Route 
+  path="/access-denied"
+  element={<AccessDenied/>}/>
 </Routes>
+
 </main>
 </div>
 
