@@ -188,68 +188,126 @@ export default function Warehouse() {
   }
 
   function startScanner() {
-    setError("");
-    setSuccess("");
-    setScannerOpen(true);
+  setError("");
+  setSuccess("");
+  setScannerOpen(true);
 
-    setTimeout(() => {
-      if (scannerRef.current) return;
+  setTimeout(() => {
+    if (scannerRef.current) return;
 
-      const scanner = new Html5Qrcode("warehouse-qr-reader");
+    const scanner = new Html5Qrcode(
+      "warehouse-qr-reader",
+      {
+        verbose: false,
+      },
+    );
 
-      scannerRef.current = scanner;
+    scannerRef.current = scanner;
 
-      scanner
-        .start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: (width, height) => {
-              const size =
-                Math.floor(
-                  Math.min(width, height) * 0.75,
-                );
-
-              return {
-                width: size,
-                height: size,
-              };
-            },
-            aspectRatio: 1,
-            formatsToSupport: [
-              Html5QrcodeSupportedFormats.QR_CODE,
-            ],
-            disableFlip: false,
+    scanner
+      .start(
+        {
+          facingMode: {
+            ideal: "environment",
           },
-          async (decodedText) => {
-            if (scannerRef.current !== scanner) {
-              return;
-            }
+        },
+        {
+          fps: 15,
 
-            const code = normalizeQrCode(decodedText);
+          qrbox: function (viewfinderWidth, viewfinderHeight) {
+            const minEdge = Math.min(
+              viewfinderWidth,
+              viewfinderHeight,
+            );
 
-            stopScanner();
-            setScannerOpen(false);
+            const size = Math.floor(
+              minEdge * 0.65,
+            );
 
-            await handleScannedCode(code);
+            return {
+              width: size,
+              height: size,
+            };
           },
-          () => null,
-        )
-        .catch((err) => {
-          console.error(err);
 
-          if (scannerRef.current === scanner) {
-            scannerRef.current = null;
+          aspectRatio: 1,
+
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+          ],
+
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true,
+          },
+
+          disableFlip: false,
+        },
+
+        async (decodedText) => {
+          if (scannerRef.current !== scanner) {
+            return;
+          }
+
+          console.log(
+            "QR MAGAZZINO RILEVATO:",
+            decodedText,
+          );
+
+          const code =
+            normalizeQrCode(decodedText);
+
+          scannerRef.current = null;
+
+          try {
+            await scanner.stop();
+          } catch (error) {
+            console.warn(
+              "Stop scanner:",
+              error,
+            );
+          }
+
+          try {
+            await scanner.clear();
+          } catch (error) {
+            console.warn(
+              "Clear scanner:",
+              error,
+            );
           }
 
           setScannerOpen(false);
-          setError(
-            err?.message ||
-              "Impossibile avviare la fotocamera",
-          );
-        });
-    }, 150);
-  }
+
+          await handleScannedCode(code);
+        },
+
+        (errorMessage) => {
+          // html5-qrcode chiama questa funzione
+          // continuamente quando NON trova un QR.
+          // Non mostriamo errori all'utente.
+        },
+      )
+      .catch((error) => {
+        console.error(
+          "Errore avvio scanner:",
+          error,
+        );
+
+        if (
+          scannerRef.current === scanner
+        ) {
+          scannerRef.current = null;
+        }
+
+        setScannerOpen(false);
+
+        setError(
+          error?.message ||
+            "Impossibile avviare la fotocamera",
+        );
+      });
+  }, 300);
+}
 
   async function handleScannedCode(code) {
     if (!code) {
@@ -898,7 +956,7 @@ export default function Warehouse() {
         >
           <div
             id="warehouse-qr-reader"
-            className="overflow-hidden rounded-xl"
+            className="overflow-hidden rounded-xl bg-black min-h-[320px]"
           />
 
           <p className="text-sm text-white/40 text-center mt-4">
@@ -1086,7 +1144,7 @@ function AssetDetailModal({
           <div className="bg-white p-5 rounded-2xl">
             <QRCode
               value={asset.assetCode}
-              size={180}
+              size={280}
             />
           </div>
         </div>
