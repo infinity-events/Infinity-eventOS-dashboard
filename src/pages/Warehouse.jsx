@@ -35,136 +35,192 @@ import {
 function downloadAssetLabel(asset) {
   if (!asset?.assetCode) return;
 
-  const qrCanvas = document.querySelector(
-    "#asset-label-qr canvas",
+  const qrSvg = document.querySelector(
+    "#asset-label-qr svg"
   );
 
-  if (!qrCanvas) {
+  if (!qrSvg) {
     alert("QR non ancora disponibile.");
     return;
   }
 
-  const width = 1000;
-  const height = 1200;
+  const svgData = new XMLSerializer().serializeToString(qrSvg);
 
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-
-  const ctx = canvas.getContext("2d");
-
-  // Sfondo
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, width, height);
-
-  // Nome asset
-  ctx.fillStyle = "#111111";
-  ctx.textAlign = "center";
-  ctx.font = "bold 64px Arial";
-
-  const name =
-    asset.name?.length > 24
-      ? asset.name.substring(0, 24) + "..."
-      : asset.name;
-
-  ctx.fillText(
-    name,
-    width / 2,
-    130,
+  const svgBlob = new Blob(
+    [svgData],
+    {
+      type: "image/svg+xml;charset=utf-8",
+    }
   );
 
-  // Codice inventario
-  ctx.fillStyle = "#777777";
-  ctx.font = "32px monospace";
+  const url = URL.createObjectURL(svgBlob);
 
-  ctx.fillText(
-    asset.assetCode,
-    width / 2,
-    185,
-  );
+  const img = new Image();
 
-  // QR
-  const qrSize = 650;
-  const qrX = (width - qrSize) / 2;
-  const qrY = 280;
+  img.onload = () => {
+    const width = 1000;
+    const height = 1200;
 
-  ctx.drawImage(
-    qrCanvas,
-    qrX,
-    qrY,
-    qrSize,
-    qrSize,
-  );
+    const canvas = document.createElement("canvas");
 
-  // Bordo arrotondato intorno al QR
-  ctx.strokeStyle = "#eeeeee";
-  ctx.lineWidth = 8;
+    canvas.width = width;
+    canvas.height = height;
 
-  const radius = 35;
+    const ctx = canvas.getContext("2d");
 
-  ctx.beginPath();
-  ctx.roundRect(
-    qrX - 25,
-    qrY - 25,
-    qrSize + 50,
-    qrSize + 50,
-    radius,
-  );
-  ctx.stroke();
+    if (!ctx) {
+      URL.revokeObjectURL(url);
+      return;
+    }
 
-  // Codice sotto il QR
-  ctx.fillStyle = "#777777";
-  ctx.font = "26px Arial";
+    // Sfondo
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(
+      0,
+      0,
+      width,
+      height
+    );
 
-  ctx.fillText(
-    "INFINITY EVENTOS",
-    width / 2,
-    1050,
-  );
+    // Nome
+    ctx.fillStyle = "#111111";
+    ctx.textAlign = "center";
+    ctx.font = "bold 64px Arial";
 
-  // Download
-  const link =
-    document.createElement("a");
+    const name =
+      asset.name?.length > 24
+        ? asset.name.substring(0, 24) + "..."
+        : asset.name;
 
-  link.download = `${asset.assetCode}-label.png`;
-  link.href = canvas.toDataURL("image/png");
+    ctx.fillText(
+      name,
+      width / 2,
+      130
+    );
 
-  link.click();
+    // Codice
+    ctx.fillStyle = "#777777";
+    ctx.font = "32px monospace";
+
+    ctx.fillText(
+      asset.assetCode,
+      width / 2,
+      185
+    );
+
+    // QR
+    const qrSize = 650;
+    const qrX =
+      (width - qrSize) / 2;
+    const qrY = 280;
+
+    ctx.drawImage(
+      img,
+      qrX,
+      qrY,
+      qrSize,
+      qrSize
+    );
+
+    // Bordo QR
+    ctx.strokeStyle = "#eeeeee";
+    ctx.lineWidth = 8;
+
+    const radius = 35;
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+      qrX - 25,
+      qrY - 25,
+      qrSize + 50,
+      qrSize + 50,
+      radius
+    );
+
+    ctx.stroke();
+
+    // Branding
+    ctx.fillStyle = "#777777";
+    ctx.font = "26px Arial";
+
+    ctx.fillText(
+      "INFINITY EVENTOS",
+      width / 2,
+      1050
+    );
+
+    // Download
+    const link =
+      document.createElement("a");
+
+    link.download =
+      `${asset.assetCode}-label.png`;
+
+    link.href =
+      canvas.toDataURL("image/png");
+
+    link.click();
+
+    URL.revokeObjectURL(url);
+  };
+
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    alert("Impossibile generare il PNG del QR.");
+  };
+
+  img.src = url;
 }
 
 function printAssetLabel(asset) {
   if (!asset?.assetCode) return;
 
-  const qrCanvas = document.querySelector(
-    "#asset-label-qr canvas",
+  const qrSvg = document.querySelector(
+    "#asset-label-qr svg"
   );
 
-  if (!qrCanvas) {
+  if (!qrSvg) {
     alert("QR non ancora disponibile.");
     return;
   }
 
-  const qrDataUrl =
-    qrCanvas.toDataURL("image/png");
+  const svgData =
+    new XMLSerializer().serializeToString(
+      qrSvg
+    );
+
+  const svgBlob = new Blob(
+    [svgData],
+    {
+      type: "image/svg+xml;charset=utf-8",
+    }
+  );
+
+  const qrUrl =
+    URL.createObjectURL(svgBlob);
 
   const printWindow =
     window.open(
       "",
       "_blank",
-      "width=600,height=800",
+      "width=600,height=800"
     );
 
   if (!printWindow) {
+    URL.revokeObjectURL(qrUrl);
+
     alert(
-      "Il browser ha bloccato la finestra di stampa.",
+      "Il browser ha bloccato la finestra di stampa."
     );
+
     return;
   }
 
   const safeName =
     String(asset.name || "")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+      .replace(/>/g, "");
 
   const safeCode =
     String(asset.assetCode || "")
@@ -197,10 +253,10 @@ function printAssetLabel(asset) {
             width: 100mm;
             height: 120mm;
             padding: 10mm;
+
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
           }
 
           .name {
@@ -222,6 +278,7 @@ function printAssetLabel(asset) {
           .qr-wrapper {
             margin-top: 8mm;
             padding: 5mm;
+
             border: 1px solid #eee;
             border-radius: 5mm;
           }
@@ -242,6 +299,7 @@ function printAssetLabel(asset) {
       </head>
 
       <body>
+
         <div class="label">
 
           <div class="name">
@@ -255,7 +313,7 @@ function printAssetLabel(asset) {
           <div class="qr-wrapper">
             <img
               class="qr"
-              src="${qrDataUrl}"
+              src="${qrUrl}"
             />
           </div>
 
@@ -266,21 +324,30 @@ function printAssetLabel(asset) {
         </div>
 
         <script>
+
           window.onload = function() {
+
             setTimeout(function() {
               window.print();
-            }, 300);
+            }, 500);
+
           };
 
           window.onafterprint = function() {
             window.close();
           };
+
         </script>
+
       </body>
     </html>
   `);
 
   printWindow.document.close();
+
+  setTimeout(() => {
+    URL.revokeObjectURL(qrUrl);
+  }, 5000);
 }
 
 function normalizeQrCode(value) {
@@ -1357,9 +1424,10 @@ function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-xl max-h-[90vh] overflow-hidden rounded-2xl border border-white/10 bg-[#111113] shadow-2xl">
+      <div className="w-full max-w-xl max-h-[90vh] rounded-2xl border border-white/10 bg-[#111113] shadow-2xl flex flex-col overflow-hidden">
 
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+        {/* HEADER */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
           <h2 className="font-semibold">
             {title}
           </h2>
@@ -1372,9 +1440,11 @@ function Modal({
           </button>
         </div>
 
-        <div className="p-5 overflow-y-auto">
+        {/* CONTENT */}
+        <div className="p-5 overflow-y-auto min-h-0">
           {children}
         </div>
+
       </div>
     </div>
   );
