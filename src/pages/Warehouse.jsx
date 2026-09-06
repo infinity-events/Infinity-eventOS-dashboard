@@ -31,6 +31,257 @@ import {
   returnInventoryAsset,
 } from "../api/inventory";
 
+function downloadAssetLabel(asset) {
+  if (!asset?.assetCode) return;
+
+  const qrCanvas = document.querySelector(
+    "#asset-label-qr canvas",
+  );
+
+  if (!qrCanvas) {
+    alert("QR non ancora disponibile.");
+    return;
+  }
+
+  const width = 1000;
+  const height = 1200;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d");
+
+  // Sfondo
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+
+  // Nome asset
+  ctx.fillStyle = "#111111";
+  ctx.textAlign = "center";
+  ctx.font = "bold 64px Arial";
+
+  const name =
+    asset.name?.length > 24
+      ? asset.name.substring(0, 24) + "..."
+      : asset.name;
+
+  ctx.fillText(
+    name,
+    width / 2,
+    130,
+  );
+
+  // Codice inventario
+  ctx.fillStyle = "#777777";
+  ctx.font = "32px monospace";
+
+  ctx.fillText(
+    asset.assetCode,
+    width / 2,
+    185,
+  );
+
+  // QR
+  const qrSize = 650;
+  const qrX = (width - qrSize) / 2;
+  const qrY = 280;
+
+  ctx.drawImage(
+    qrCanvas,
+    qrX,
+    qrY,
+    qrSize,
+    qrSize,
+  );
+
+  // Bordo arrotondato intorno al QR
+  ctx.strokeStyle = "#eeeeee";
+  ctx.lineWidth = 8;
+
+  const radius = 35;
+
+  ctx.beginPath();
+  ctx.roundRect(
+    qrX - 25,
+    qrY - 25,
+    qrSize + 50,
+    qrSize + 50,
+    radius,
+  );
+  ctx.stroke();
+
+  // Codice sotto il QR
+  ctx.fillStyle = "#777777";
+  ctx.font = "26px Arial";
+
+  ctx.fillText(
+    "INFINITY EVENTOS",
+    width / 2,
+    1050,
+  );
+
+  // Download
+  const link =
+    document.createElement("a");
+
+  link.download = `${asset.assetCode}-label.png`;
+  link.href = canvas.toDataURL("image/png");
+
+  link.click();
+}
+
+function printAssetLabel(asset) {
+  if (!asset?.assetCode) return;
+
+  const qrCanvas = document.querySelector(
+    "#asset-label-qr canvas",
+  );
+
+  if (!qrCanvas) {
+    alert("QR non ancora disponibile.");
+    return;
+  }
+
+  const qrDataUrl =
+    qrCanvas.toDataURL("image/png");
+
+  const printWindow =
+    window.open(
+      "",
+      "_blank",
+      "width=600,height=800",
+    );
+
+  if (!printWindow) {
+    alert(
+      "Il browser ha bloccato la finestra di stampa.",
+    );
+    return;
+  }
+
+  const safeName =
+    String(asset.name || "")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+  const safeCode =
+    String(asset.assetCode || "")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${safeCode}</title>
+
+        <style>
+          @page {
+            size: 100mm 120mm;
+            margin: 0;
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            margin: 0;
+            background: white;
+            font-family: Arial, sans-serif;
+          }
+
+          .label {
+            width: 100mm;
+            height: 120mm;
+            padding: 10mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+          }
+
+          .name {
+            font-size: 22pt;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 4mm;
+            max-width: 90mm;
+            word-break: break-word;
+          }
+
+          .code {
+            font-family: monospace;
+            font-size: 11pt;
+            color: #777;
+            margin-top: 2mm;
+          }
+
+          .qr-wrapper {
+            margin-top: 8mm;
+            padding: 5mm;
+            border: 1px solid #eee;
+            border-radius: 5mm;
+          }
+
+          .qr {
+            width: 62mm;
+            height: 62mm;
+            display: block;
+          }
+
+          .brand {
+            margin-top: 8mm;
+            font-size: 8pt;
+            letter-spacing: 1px;
+            color: #888;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="label">
+
+          <div class="name">
+            ${safeName}
+          </div>
+
+          <div class="code">
+            ${safeCode}
+          </div>
+
+          <div class="qr-wrapper">
+            <img
+              class="qr"
+              src="${qrDataUrl}"
+            />
+          </div>
+
+          <div class="brand">
+            INFINITY EVENTOS
+          </div>
+
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+
+          window.onafterprint = function() {
+            window.close();
+          };
+        </script>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+}
+
 function normalizeQrCode(value) {
   if (!value) return "";
 
@@ -207,9 +458,7 @@ export default function Warehouse() {
     scanner
       .start(
         {
-          facingMode: {
-            ideal: "environment",
-          },
+          facingMode: "environment",
         },
         {
           fps: 15,
@@ -1141,12 +1390,15 @@ function AssetDetailModal({
         </div>
 
         <div className="flex justify-center py-4">
-          <div className="bg-white p-5 rounded-2xl">
+          <div 
+            id="asset-label-qr"
+            className="bg-white p-6 rounded-2xl"
+        >
             <QRCode
-              value={asset.assetCode}
-              size={280}
+                value={asset.assetCode}
+                size={280}
             />
-          </div>
+            </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -1226,32 +1478,58 @@ function AssetDetailModal({
           </div>
         )}
 
-        <div className="flex gap-2">
-          {asset.status === "AVAILABLE" && (
-            <button
-              onClick={onRent}
-              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
-            >
-              Noleggia
-            </button>
-          )}
+        <div className="space-y-2">
 
-          {asset.status === "RENTED" && (
-            <button
-              onClick={onReturn}
-              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
-            >
-              Registra restituzione
-            </button>
-          )}
+  <div className="grid grid-cols-2 gap-2">
+    <button
+      onClick={() =>
+        downloadAssetLabel(asset)
+      }
+      className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
+    >
+      <QrCode className="w-4 h-4" />
+      Scarica PNG
+    </button>
 
-          <button
-            onClick={onClose}
-            className="px-5 py-3 rounded-xl bg-white/5 border border-white/10"
-          >
-            Chiudi
-          </button>
-        </div>
+    <button
+      onClick={() =>
+        printAssetLabel(asset)
+      }
+      className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
+    >
+      <FileText className="w-4 h-4" />
+      Stampa
+    </button>
+  </div>
+
+  <div className="flex gap-2">
+        {asset.status === "AVAILABLE" && (
+        <button
+            onClick={onRent}
+            className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
+        >
+            Noleggia
+        </button>
+        )}
+
+        {asset.status === "RENTED" && (
+        <button
+            onClick={onReturn}
+            className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
+        >
+            Registra restituzione
+        </button>
+        )}
+
+        <button
+        onClick={onClose}
+        className="px-5 py-3 rounded-xl bg-white/5 border border-white/10"
+        >
+        Chiudi
+        </button>
+
+    </div>
+    </div>
       </div>
     </Modal>
   );
