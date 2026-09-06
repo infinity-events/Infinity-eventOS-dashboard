@@ -85,12 +85,6 @@ const items = [
   // MAGAZZINO LO AGGIUNGIAMO TRA POCO
 ];
 
-const visibleItems = items.filter((item) => {
-  if (!item.roles) return true;
-
-  return item.roles.includes(role);
-});
-
 function SidebarNavItem({ item, onClose }) {
   const iconRef = useRef(null);
 
@@ -128,6 +122,11 @@ function SidebarNavItem({ item, onClose }) {
 export default function Sidebar({open=false,onClose=()=>{}}){
 const { logout, role } = useAuth();
 
+const visibleItems = items.filter((item) => {
+  if (!item.roles) return true;
+
+  return item.roles.includes(role);
+});
 
 return (
 
