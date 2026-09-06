@@ -24,6 +24,7 @@ import QRCode from "react-qr-code";
 import {
   getInventoryStats,
   getInventoryAssets,
+  getInventoryAsset,
   getInventoryRentals,
   getInventoryMovements,
   createInventoryAsset,
@@ -424,53 +425,53 @@ export default function Warehouse() {
   }, []);
 
   function stopScanner() {
-    const scanner = scannerRef.current;
+  const scanner = scannerRef.current;
 
-    if (!scanner) return;
+  if (!scanner) return;
 
-    scannerRef.current = null;
+  scannerRef.current = null;
 
-    scanner
-      .stop()
-      .catch(() => {})
-      .finally(() => {
-        scanner.clear().catch(() => {});
-      });
-  }
+  scanner
+    .stop()
+    .then(() => scanner.clear())
+    .catch((error) => {
+      console.warn(
+        "Errore chiusura scanner:",
+        error
+      );
+    });
+}
 
   function startScanner() {
+  if (scannerRef.current) return;
+
   setError("");
   setSuccess("");
   setScannerOpen(true);
 
   setTimeout(() => {
-    if (scannerRef.current) return;
-
-    const scanner = new Html5Qrcode(
-      "warehouse-qr-reader",
-      {
-        verbose: false,
-      },
-    );
+    const scanner =
+      new Html5Qrcode(
+        "warehouse-qr-reader"
+      );
 
     scannerRef.current = scanner;
 
     scanner
       .start(
+        { facingMode: "environment" },
         {
-          facingMode: "environment",
-        },
-        {
-          fps: 15,
+          fps: 10,
 
-          qrbox: function (viewfinderWidth, viewfinderHeight) {
-            const minEdge = Math.min(
-              viewfinderWidth,
-              viewfinderHeight,
-            );
-
+          qrbox: (
+            viewfinderWidth,
+            viewfinderHeight
+          ) => {
             const size = Math.floor(
-              minEdge * 0.65,
+              Math.min(
+                viewfinderWidth,
+                viewfinderHeight
+              ) * 0.8
             );
 
             return {
@@ -485,25 +486,20 @@ export default function Warehouse() {
             Html5QrcodeSupportedFormats.QR_CODE,
           ],
 
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true,
-          },
-
           disableFlip: false,
         },
 
         async (decodedText) => {
-          if (scannerRef.current !== scanner) {
+          if (
+            scannerRef.current !== scanner
+          ) {
             return;
           }
 
           console.log(
             "QR MAGAZZINO RILEVATO:",
-            decodedText,
+            decodedText
           );
-
-          const code =
-            normalizeQrCode(decodedText);
 
           scannerRef.current = null;
 
@@ -511,8 +507,8 @@ export default function Warehouse() {
             await scanner.stop();
           } catch (error) {
             console.warn(
-              "Stop scanner:",
-              error,
+              "Errore stop scanner:",
+              error
             );
           }
 
@@ -520,26 +516,24 @@ export default function Warehouse() {
             await scanner.clear();
           } catch (error) {
             console.warn(
-              "Clear scanner:",
-              error,
+              "Errore clear scanner:",
+              error
             );
           }
 
           setScannerOpen(false);
 
-          await handleScannedCode(code);
+          await handleScannedCode(
+            decodedText
+          );
         },
 
-        (errorMessage) => {
-          // html5-qrcode chiama questa funzione
-          // continuamente quando NON trova un QR.
-          // Non mostriamo errori all'utente.
-        },
+        () => null
       )
       .catch((error) => {
         console.error(
           "Errore avvio scanner:",
-          error,
+          error
         );
 
         if (
@@ -552,33 +546,55 @@ export default function Warehouse() {
 
         setError(
           error?.message ||
-            "Impossibile avviare la fotocamera",
+            "Impossibile avviare la fotocamera"
         );
       });
-  }, 300);
+  }, 100);
 }
 
   async function handleScannedCode(code) {
-    if (!code) {
-      setError("QR non valido");
-      return;
-    }
+  if (!code) {
+    setError("QR non valido.");
+    return;
+  }
 
-    const asset = assets.find(
-      (item) =>
-        item.assetCode.toUpperCase() ===
-        code.toUpperCase(),
+  try {
+    setError("");
+    setSuccess("");
+
+    const normalizedCode =
+      normalizeQrCode(code);
+
+    console.log(
+      "QR MAGAZZINO LETTO:",
+      normalizedCode
     );
+
+    const asset =
+      await getInventoryAsset(
+        normalizedCode
+      );
 
     if (!asset) {
       setError(
-        `Asset ${code} non trovato nel magazzino.`,
+        `Asset ${normalizedCode} non trovato.`
       );
       return;
     }
 
     setDetailAsset(asset);
+  } catch (err) {
+    console.error(
+      "Errore ricerca asset QR:",
+      err
+    );
+
+    setError(
+      err?.message ||
+        `Asset ${code} non trovato nel magazzino.`
+    );
   }
+}
 
   function handleManualSearch() {
     const code = normalizeQrCode(manualCode);
@@ -1395,8 +1411,9 @@ function AssetDetailModal({
             className="bg-white p-6 rounded-2xl"
         >
             <QRCode
-                value={asset.assetCode}
-                size={280}
+                value={String(asset.assetCode)}
+                size={180}
+                level="M"
             />
             </div>
         </div>
@@ -1636,7 +1653,7 @@ function CreateAssetModal({
             <div className="bg-white p-5 rounded-2xl">
               <QRCode
                 value={created.assetCode}
-                size={220}
+                size={180}
               />
             </div>
           </div>
