@@ -70,3 +70,16 @@ export function returnInventoryAsset(assetCode) {
 export function getInventoryMovements() {
   return apiRequest("/inventory/movements");
 }
+
+// ============================================================
+// DELETE
+// ============================================================
+
+export function deleteInventoryAsset(assetCode) {
+  return apiRequest(
+    `/inventory/assets/${encodeURIComponent(assetCode)}`,
+    {
+      method: "DELETE",
+    }
+  );
+}

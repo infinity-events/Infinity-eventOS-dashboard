@@ -17,6 +17,7 @@ import {
   User,
   Users,
   X,
+  Trash2,
 } from "lucide-react";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import QRCode from "react-qr-code";
@@ -30,6 +31,7 @@ import {
   createInventoryAsset,
   createInventoryRental,
   returnInventoryAsset,
+  deleteInventoryAsset,
 } from "../api/inventory";
 
 function downloadAssetLabel(asset) {
@@ -659,6 +661,43 @@ export default function Warehouse() {
     setError(
       err?.message ||
         `Asset ${code} non trovato nel magazzino.`
+    );
+  }
+}
+
+async function handleDeleteAsset(asset) {
+  if (!asset?.assetCode) return;
+
+  const confirmed = window.confirm(
+    `Sei sicuro di voler eliminare "${asset.name}"?\n\nQuesta operazione non può essere annullata.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setError("");
+    setSuccess("");
+
+    await deleteInventoryAsset(
+      asset.assetCode
+    );
+
+    setDetailAsset(null);
+
+    setSuccess(
+      `Asset ${asset.assetCode} eliminato correttamente.`
+    );
+
+    await loadData();
+  } catch (err) {
+    console.error(
+      "Errore eliminazione asset:",
+      err
+    );
+
+    setError(
+      err?.message ||
+        "Impossibile eliminare l'asset."
     );
   }
 }
@@ -1310,6 +1349,9 @@ export default function Warehouse() {
           onReturn={() =>
             handleReturn(detailAsset)
           }
+          onDelete={() =>
+            handleDeleteAsset(detailAsset)
+        }
         />
       )}
 
@@ -1455,9 +1497,8 @@ function AssetDetailModal({
   onClose,
   onRent,
   onReturn,
+  onDelete,
 }) {
-  const rental = getActiveRental(asset);
-
   return (
     <Modal
       title="Dettaglio asset"
@@ -1465,158 +1506,146 @@ function AssetDetailModal({
     >
       <div className="space-y-5">
 
+        {/* NOME */}
         <div>
-          <div className="text-2xl font-semibold">
+          <h3 className="text-2xl font-semibold text-white">
             {asset.name}
-          </div>
+          </h3>
 
-          <div className="font-mono text-sm text-white/30 mt-1">
+          <p className="mt-1 text-sm text-white/40 font-mono">
             {asset.assetCode}
+          </p>
+        </div>
+
+        {/* QR */}
+        <div className="flex justify-center">
+          <div
+            id="asset-label-qr"
+            className="bg-white p-6 rounded-[28px] inline-flex"
+          >
+            <QRCode
+              value={String(asset.assetCode)}
+              size={280}
+              level="M"
+            />
           </div>
         </div>
 
-        <div className="flex justify-center py-4">
-          <div 
-            id="asset-label-qr"
-            className="bg-white p-6 rounded-2xl"
-        >
-            <QRCode
-                value={String(asset.assetCode)}
-                size={180}
-                level="M"
-            />
-            </div>
-        </div>
-
+        {/* INFO */}
         <div className="grid grid-cols-2 gap-3">
-          <Info
-            label="Stato"
-            value={
-              <span
-                className={`inline-flex px-2 py-1 rounded-lg border text-xs ${statusClass(
-                  asset.status,
-                )}`}
-              >
-                {statusLabel(asset.status)}
-              </span>
-            }
-          />
 
-          <Info
-            label="Categoria"
-            value={
-              asset.category || "-"
-            }
-          />
+          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+            <p className="text-xs text-white/40">
+              Stato
+            </p>
 
-          <Info
-            label="Seriale"
-            value={
-              asset.serialNumber || "-"
-            }
-          />
+            <p className="mt-1 font-medium">
+              {statusLabel(asset.status)}
+            </p>
+          </div>
 
-          <Info
-            label="Creato"
-            value={formatDate(
-              asset.createdAt,
-            )}
-          />
+          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+            <p className="text-xs text-white/40">
+              Categoria
+            </p>
+
+            <p className="mt-1 font-medium">
+              {asset.category || "—"}
+            </p>
+          </div>
+
         </div>
 
         {asset.description && (
           <div>
-            <div className="text-xs text-white/30 mb-1">
+            <p className="text-xs text-white/40 mb-1">
               Descrizione
-            </div>
+            </p>
 
-            <div className="text-sm text-white/60">
+            <p className="text-sm text-white/70">
               {asset.description}
-            </div>
+            </p>
           </div>
         )}
 
-        {rental && (
-          <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
-            <div className="text-xs text-orange-300/60 mb-2">
-              ATTUALMENTE NOLEGGIATO
-            </div>
+        {asset.serialNumber && (
+          <div>
+            <p className="text-xs text-white/40 mb-1">
+              Numero di serie
+            </p>
 
-            <div className="font-medium">
-              {rental.customerName}
-            </div>
-
-            {rental.customerCompany && (
-              <div className="text-sm text-white/40">
-                {rental.customerCompany}
-              </div>
-            )}
-
-            {rental.customerPhone && (
-              <div className="text-sm text-white/40 mt-2">
-                {rental.customerPhone}
-              </div>
-            )}
-
-            <div className="text-xs text-white/30 mt-3">
-              Noleggiato il{" "}
-              {formatDate(rental.rentedAt)}
-            </div>
+            <p className="font-mono text-sm">
+              {asset.serialNumber}
+            </p>
           </div>
         )}
 
-        <div className="space-y-2">
+        {/* AZIONI QR */}
+        <div className="grid grid-cols-2 gap-2">
 
-  <div className="grid grid-cols-2 gap-2">
-    <button
-      onClick={() =>
-        downloadAssetLabel(asset)
-      }
-      className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
-    >
-      <QrCode className="w-4 h-4" />
-      Scarica PNG
-    </button>
+          <button
+            onClick={() =>
+              downloadAssetLabel(asset)
+            }
+            className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
+          >
+            <QrCode className="w-4 h-4" />
+            Scarica PNG
+          </button>
 
-    <button
-      onClick={() =>
-        printAssetLabel(asset)
-      }
-      className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
-    >
-      <FileText className="w-4 h-4" />
-      Stampa
-    </button>
-  </div>
+          <button
+            onClick={() =>
+              printAssetLabel(asset)
+            }
+            className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            Stampa
+          </button>
 
-  <div className="flex gap-2">
-        {asset.status === "AVAILABLE" && (
-        <button
-            onClick={onRent}
-            className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
-        >
-            Noleggia
-        </button>
+        </div>
+
+        {/* AZIONI PRINCIPALI */}
+        <div className="flex gap-2">
+
+          {asset.status === "AVAILABLE" && (
+            <button
+              onClick={onRent}
+              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
+            >
+              Noleggia
+            </button>
+          )}
+
+          {asset.status === "RENTED" && (
+            <button
+              onClick={onReturn}
+              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
+            >
+              Registra restituzione
+            </button>
+          )}
+
+          <button
+            onClick={onClose}
+            className="px-5 py-3 rounded-xl bg-white/5 border border-white/10"
+          >
+            Chiudi
+          </button>
+
+        </div>
+
+        {/* ELIMINA */}
+        {asset.status !== "RENTED" && (
+          <button
+            onClick={onDelete}
+            className="w-full py-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition flex items-center justify-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Elimina asset
+          </button>
         )}
 
-        {asset.status === "RENTED" && (
-        <button
-            onClick={onReturn}
-            className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
-        >
-            Registra restituzione
-        </button>
-        )}
-
-        <button
-        onClick={onClose}
-        className="px-5 py-3 rounded-xl bg-white/5 border border-white/10"
-        >
-        Chiudi
-        </button>
-
-    </div>
-    </div>
       </div>
     </Modal>
   );
