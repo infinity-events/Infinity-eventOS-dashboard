@@ -15,63 +15,81 @@ import { SettingsIcon } from "./icons/settings";
 import { ShoppingCart } from 'lucide-react';
 
 
-const items=[
+const items = [
+  {
+    name: "Dashboard",
+    path: "/dashboard",
+    icon: HomeIcon,
+    roles: ["ADMIN", "AZIENDA", "OWNER"],
+  },
+  {
+    name: "Festival",
+    path: "/festivals",
+    icon: CalendarDaysIcon,
+    roles: ["ADMIN", "AZIENDA", "OWNER"],
+  },
+  {
+    name: "Biglietti",
+    path: "/tickets",
+    icon: TicketIcon,
+    roles: ["ADMIN", "AZIENDA", "OWNER"],
+  },
+  {
+    name: "Bracciali",
+    path: "/wristbands",
+    icon: RadioIcon,
+    roles: ["ADMIN", "AZIENDA", "OWNER"],
+  },
+  {
+    name: "Partecipanti",
+    path: "/participants",
+    icon: UsersIcon,
+    roles: [
+      "ADMIN",
+      "AZIENDA",
+      "OWNER",
+      "STAFF",
+      "SECURITY",
+    ],
+  },
+  {
+    name: "Wallet",
+    path: "/wallet",
+    icon: WalletIcon,
+    roles: ["ADMIN", "AZIENDA", "OWNER"],
+  },
+  {
+    name: "POS",
+    path: "/pos",
+    icon: ShoppingCart,
+    roles: [
+      "ADMIN",
+      "AZIENDA",
+      "OWNER",
+      "CASHIER",
+    ],
+  },
+  {
+    name: "Analytics",
+    path: "/analytics",
+    icon: ChartColumnIncreasingIcon,
+    roles: ["ADMIN", "AZIENDA", "OWNER"],
+  },
+  {
+    name: "Impostazioni",
+    path: "/settings",
+    icon: SettingsIcon,
+    roles: ["ADMIN", "AZIENDA", "OWNER"],
+  },
 
-{
-name:"Dashboard",
-path:"/dashboard",
-icon:HomeIcon
-},
-
-{
-name:"Festival",
-path:"/festivals",
-icon:CalendarDaysIcon
-},
-
-{
-name:"Biglietti",
-path:"/tickets",
-icon:TicketIcon
-},
-
-{
-name:"Bracciali",
-path:"/wristbands",
-icon:RadioIcon
-},
-
-{
-name:"Partecipanti",
-path:"/participants",
-icon:UsersIcon
-},
-
-{
-name:"Wallet",
-path:"/wallet",
-icon:WalletIcon
-},
-
-{
-name: 'POS',
-path: '/POS',
-icon: ShoppingCart
-},
-
-{
-name:"Analytics",
-path:"/analytics",
-icon:ChartColumnIncreasingIcon
-},
-
-{
-name:"Impostazioni",
-path:"/settings",
-icon:SettingsIcon
-}
-
+  // MAGAZZINO LO AGGIUNGIAMO TRA POCO
 ];
+
+const visibleItems = items.filter((item) => {
+  if (!item.roles) return true;
+
+  return item.roles.includes(role);
+});
 
 function SidebarNavItem({ item, onClose }) {
   const iconRef = useRef(null);
@@ -108,7 +126,7 @@ function SidebarNavItem({ item, onClose }) {
 
 
 export default function Sidebar({open=false,onClose=()=>{}}){
-const {logout}=useAuth();
+const { logout, role } = useAuth();
 
 
 return (
@@ -155,7 +173,7 @@ invert
 <nav className="space-y-2">
 
 
-{items.map((item) => (
+{visibleItems.map((item) => (
   <SidebarNavItem key={item.name} item={item} onClose={onClose} />
 ))}
 

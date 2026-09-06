@@ -1,0 +1,19 @@
+export const ROLES = {
+  CUSTOMER: "CUSTOMER",
+  STAFF: "STAFF",
+  SECURITY: "SECURITY",
+  CASHIER: "CASHIER",
+  ADMIN: "ADMIN",
+  OWNER: "OWNER",
+  AZIENDA: "AZIENDA",
+};
+
+export const DASHBOARD_ROLES = [
+  ROLES.ADMIN,
+  ROLES.AZIENDA,
+  ROLES.OWNER,
+];
+
+export const ADMIN_ROLES = [
+  ROLES.ADMIN,
+];

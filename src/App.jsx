@@ -19,7 +19,46 @@ import { useAuth } from "./contexts/AuthContext";
 import { useFestival } from "./contexts/FestivalContext";
 import { createFestival } from "./api/festivals";
 
+function RoleRoute({ children, allowedRoles }) {
+  const { role } = useAuth();
 
+  if (!role) {
+    return (
+      <div className="min-h-screen bg-[#09090B] text-white flex items-center justify-center">
+        Caricamento profilo...
+      </div>
+    );
+  }
+
+  if (!allowedRoles.includes(role)) {
+    return <Navigate to="/access-denied" replace />;
+  }
+
+  return children;
+}
+
+function AccessDenied() {
+  return (
+    <div className="min-h-[70vh] flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold">
+          Accesso negato
+        </h1>
+
+        <p className="text-gray-400 mt-3">
+          Non hai i permessi necessari per accedere a questa sezione.
+        </p>
+
+        <button
+          onClick={() => window.history.back()}
+          className="mt-6 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20"
+        >
+          Torna indietro
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function Layout(){
 const [menuOpen,setMenuOpen]=useState(false);
@@ -34,18 +73,104 @@ return(
 <main className="min-w-0 p-4 sm:p-8">
 <Routes>
 <Route path="/" element={<Navigate to="/dashboard" replace/>}/>
-<Route path="/dashboard" element={<Dashboard/>}/>
-<Route path="/festivals" element={<Festivals/>}/>
-<Route path="/tickets" element={<Tickets/>}/>
-<Route path="/wristbands" element={<Wristbands/>}/>
-<Route path="/entrance" element={<Navigate to="/participants" replace/>}/>
-<Route path="/participants" element={<Participants/>}/>
-<Route path="/nfc/register" element={<NFCRegister/>}/>
-<Route path="/wristbands/manual" element={<WristbandManual/>}/>
-<Route path="/wallet" element={<Wallet/>}/>
-<Route path="/pos" element={<POS/>}/>
-<Route path="/analytics" element={<Analytics/>}/>
-<Route path="/settings" element={<Settings/>}/>
+<Route
+  path="/dashboard"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER"]}>
+      <Dashboard />
+    </RoleRoute>
+  }
+/>
+<Route
+  path="/festivals"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER"]}>
+      <Festivals />
+    </RoleRoute>
+  }
+/>
+
+<Route
+  path="/tickets"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER"]}>
+      <Tickets />
+    </RoleRoute>
+  }
+/>
+
+<Route
+  path="/wristbands"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER"]}>
+      <Wristbands />
+    </RoleRoute>
+  }
+/>
+
+<Route
+  path="/participants"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER", "STAFF", "SECURITY"]}>
+      <Participants />
+    </RoleRoute>
+  }
+/>
+
+<Route
+  path="/nfc/register"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER", "STAFF"]}>
+      <NFCRegister />
+    </RoleRoute>
+  }
+/>
+
+<Route
+  path="/wristbands/manual"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER", "STAFF"]}>
+      <WristbandManual />
+    </RoleRoute>
+  }
+/>
+
+<Route
+  path="/wallet"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER"]}>
+      <Wallet />
+    </RoleRoute>
+  }
+/>
+
+<Route
+  path="/pos"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER", "CASHIER"]}>
+      <POS />
+    </RoleRoute>
+  }
+/>
+
+<Route
+  path="/analytics"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER"]}>
+      <Analytics />
+    </RoleRoute>
+  }
+/>
+
+<Route
+  path="/settings"
+  element={
+    <RoleRoute allowedRoles={["ADMIN", "AZIENDA", "OWNER"]}>
+      <Settings />
+    </RoleRoute>
+  }
+/>
+<Route path="/access-denied" element={<AccessDenied/>}/>
 </Routes>
 </main>
 </div>
