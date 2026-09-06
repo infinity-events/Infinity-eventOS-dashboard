@@ -381,14 +381,21 @@ function statusLabel(status) {
   switch (status) {
     case "AVAILABLE":
       return "Disponibile";
+
     case "RENTED":
       return "Noleggiato";
+
     case "MAINTENANCE":
       return "Manutenzione";
+
     case "LOST":
       return "Smarrimento";
+
+    case "DISMISSED":
+      return "Dismesso";
+
     default:
-      return status || "-";
+      return status;
   }
 }
 
@@ -402,6 +409,8 @@ function statusClass(status) {
       return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
     case "LOST":
       return "bg-red-500/10 text-red-400 border-red-500/20";
+    case "DISMISSED":
+      return "bg-white/5 text-white/40 border-white/10";
     default:
       return "bg-white/5 text-white/60 border-white/10";
   }
@@ -669,7 +678,7 @@ async function handleDeleteAsset(asset) {
   if (!asset?.assetCode) return;
 
   const confirmed = window.confirm(
-    `Sei sicuro di voler eliminare "${asset.name}"?\n\nQuesta operazione non può essere annullata.`
+    `Sei sicuro di voler eliminare "${asset.name}"?\n\nSe l'asset ha uno storico, verrà dismesso e lo storico verrà conservato.`
   );
 
   if (!confirmed) return;
@@ -678,17 +687,24 @@ async function handleDeleteAsset(asset) {
     setError("");
     setSuccess("");
 
-    await deleteInventoryAsset(
-      asset.assetCode
-    );
+    const result =
+      await deleteInventoryAsset(
+        asset.assetCode
+      );
 
     setDetailAsset(null);
 
-    setSuccess(
-      `Asset ${asset.assetCode} eliminato correttamente.`
-    );
-
     await loadData();
+
+    if (result?.action === "DISMISSED") {
+      setSuccess(
+        `Asset ${asset.assetCode} dismesso. Lo storico è stato conservato.`
+      );
+    } else {
+      setSuccess(
+        `Asset ${asset.assetCode} eliminato definitivamente.`
+      );
+    }
   } catch (err) {
     console.error(
       "Errore eliminazione asset:",
@@ -701,7 +717,6 @@ async function handleDeleteAsset(asset) {
     );
   }
 }
-
   function handleManualSearch() {
     const code = normalizeQrCode(manualCode);
 
