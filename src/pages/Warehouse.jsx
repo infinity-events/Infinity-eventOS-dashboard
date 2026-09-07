@@ -537,6 +537,32 @@ export default function Warehouse() {
   const [rentalAssets, setRentalAssets] =
     useState([]);
 
+  function closeRentalWizard() {
+  stopRentalScanner();
+
+  setRentalStep(null);
+  setRentalAssets([]);
+
+  setRentalForm({
+    customerName: "",
+    customerCompany: "",
+    customerEmail: "",
+    customerPhone: "",
+    expectedReturnAt: "",
+    notes: "",
+  });
+
+  lastRentalScanRef.current = {
+    code: "",
+    timestamp: 0,
+  };
+
+  rentalScanBusyRef.current = false;
+
+  setError("");
+  setSuccess("");
+}
+
 
   /* =======================================================
      LOAD DATA
