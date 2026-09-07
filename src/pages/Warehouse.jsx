@@ -37,6 +37,7 @@ import {
   returnInventoryAsset,
   getInventoryMovements,
   deleteInventoryAsset,
+  updateInventoryAsset
 } from "../api/inventory";
 
 
@@ -259,6 +260,40 @@ function AssetDetailModal({
   onReturn,
   onDelete,
 }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: asset.name || "",
+    description: asset.description || "",
+    category: asset.category || "",
+    serialNumber: asset.serialNumber || "",
+  });
+
+  async function saveChanges() {
+    if (!form.name.trim()) return;
+
+    try {
+      setSaving(true);
+      await updateInventoryAsset(asset.assetCode, form);
+      setEditing(false);
+      window.location.reload();
+    } catch (error) {
+      console.error("Errore aggiornamento asset:", error);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function cancelEdit() {
+    setForm({
+      name: asset.name || "",
+      description: asset.description || "",
+      category: asset.category || "",
+      serialNumber: asset.serialNumber || "",
+    });
+    setEditing(false);
+  }
+
   return (
     <Modal
       title="Dettaglio asset"
@@ -352,6 +387,53 @@ function AssetDetailModal({
         )}
 
 
+        {editing && (
+          <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div>
+              <label className="text-xs text-white/40">Nome</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-white/40">Descrizione</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={3}
+                className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30 resize-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-white/40">Categoria</label>
+                <input
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-white/40">Numero di serie</label>
+                <input
+                  value={form.serialNumber}
+                  onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
+                  className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
+                />
+              </div>
+            </div>
+
+            <p className="text-xs text-white/35">
+              Codice asset e stato non sono modificabili.
+            </p>
+          </div>
+        )}
+
         {/* QR ACTIONS */}
 
         <div className="grid grid-cols-2 gap-2">
@@ -404,12 +486,41 @@ function AssetDetailModal({
           )}
 
 
-          <button
-            onClick={onClose}
-            className="px-5 py-3 rounded-xl bg-white/5 border border-white/10"
-          >
-            Chiudi
-          </button>
+          {!editing ? (
+            <>
+              <button
+                onClick={() => setEditing(true)}
+                className="px-5 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition"
+              >
+                Modifica
+              </button>
+
+              <button
+                onClick={onClose}
+                className="px-5 py-3 rounded-xl bg-white/5 border border-white/10"
+              >
+                Chiudi
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={cancelEdit}
+                disabled={saving}
+                className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 disabled:opacity-50"
+              >
+                Annulla
+              </button>
+
+              <button
+                onClick={saveChanges}
+                disabled={saving || !form.name.trim()}
+                className="px-5 py-3 rounded-xl bg-white text-black font-medium disabled:opacity-50"
+              >
+                {saving ? "Salvataggio..." : "Salva"}
+              </button>
+            </>
+          )}
 
         </div>
 
@@ -485,6 +596,8 @@ export default function Warehouse() {
 
   const [detailAsset, setDetailAsset] =
     useState(null);
+
+
 
   const [showCreateAsset, setShowCreateAsset] =
     useState(false);

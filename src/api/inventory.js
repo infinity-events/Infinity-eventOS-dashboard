@@ -83,3 +83,17 @@ export function deleteInventoryAsset(assetCode) {
     }
   );
 }
+
+// ============================================================
+// UPDATE
+// ============================================================
+
+export function updateInventoryAsset(assetCode, data) {
+  return apiRequest(
+    `/inventory/assets/${encodeURIComponent(assetCode)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }
+  );
+}
