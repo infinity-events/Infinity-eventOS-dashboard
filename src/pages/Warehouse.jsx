@@ -78,6 +78,57 @@ function normalizeQrCode(value) {
   return text.toUpperCase();
 }
 
+function playScanBeep(type = "success") {
+  try {
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContext) return;
+
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+
+    const success = type === "success";
+
+    oscillator.type = "sine";
+    oscillator.frequency.value = success ? 880 : 420;
+
+    gain.gain.setValueAtTime(
+      0.0001,
+      context.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.18,
+      context.currentTime + 0.01
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      context.currentTime + 0.13
+    );
+
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+
+    oscillator.start();
+    oscillator.stop(
+      context.currentTime + 0.13
+    );
+
+    oscillator.onended = () => {
+      context.close().catch(() => {});
+    };
+  } catch (error) {
+    console.warn(
+      "Impossibile riprodurre il bip:",
+      error
+    );
+  }
+}
+
 
 function statusLabel(status) {
   switch (status) {
@@ -388,6 +439,13 @@ function AssetDetailModal({
 export default function Warehouse() {
 
   const scannerRef = useRef(null);
+
+  // Protezione contro letture ripetute dello stesso QR
+  const rentalScanBusyRef = useRef(false);
+  const lastRentalScanRef = useRef({
+    code: "",
+    timestamp: 0,
+  });
 
 
   /* -------------------------------------------------------
@@ -758,77 +816,138 @@ export default function Warehouse() {
 
 
   async function handleRentalScan(code) {
+  if (!code) return;
 
-    if (!code) return;
+  const normalizedCode =
+    normalizeQrCode(code);
 
-    try {
+  if (!normalizedCode) return;
 
-      setError("");
-      setSuccess("");
+  const now = Date.now();
 
-      const normalizedCode =
-        normalizeQrCode(code);
+  /*
+   * Ignora lo stesso QR se rimane davanti
+   * alla fotocamera.
+   */
+  if (
+    lastRentalScanRef.current.code ===
+      normalizedCode &&
+    now -
+      lastRentalScanRef.current.timestamp <
+      1500
+  ) {
+    return;
+  }
 
-      const asset =
-        await getInventoryAsset(
+  if (rentalScanBusyRef.current) {
+    return;
+  }
+
+  lastRentalScanRef.current = {
+    code: normalizedCode,
+    timestamp: now,
+  };
+
+  rentalScanBusyRef.current = true;
+
+  try {
+    setError("");
+    setSuccess("");
+
+    /*
+     * BLOCCO IMMEDIATO DEL DUPLICATO
+     */
+    if (
+      rentalAssets.some(
+        (item) =>
+          item.assetCode ===
           normalizedCode
-        );
+      )
+    ) {
+      playScanBeep("error");
 
-      if (!asset) {
-        setError(
-          `${normalizedCode} non trovato.`
-        );
-        return;
-      }
+      setError(
+        `${normalizedCode} è già presente nel noleggio.`
+      );
 
+      return;
+    }
+
+    const asset =
+      await getInventoryAsset(
+        normalizedCode
+      );
+
+    if (!asset) {
+      playScanBeep("error");
+
+      setError(
+        `${normalizedCode} non trovato nel magazzino.`
+      );
+
+      return;
+    }
+
+    if (
+      asset.status !==
+      "AVAILABLE"
+    ) {
+      playScanBeep("error");
+
+      setError(
+        `${asset.name} non è disponibile. Stato attuale: ${statusLabel(
+          asset.status
+        )}.`
+      );
+
+      return;
+    }
+
+    /*
+     * Aggiunta atomica tramite controllo
+     * sull'array corrente.
+     */
+    setRentalAssets((current) => {
       if (
-        asset.status !==
-        "AVAILABLE"
-      ) {
-        setError(
-          `${asset.name} non è disponibile.`
-        );
-        return;
-      }
-
-      const alreadyAdded =
-        rentalAssets.some(
+        current.some(
           (item) =>
             item.assetCode ===
             asset.assetCode
-        );
-
-      if (alreadyAdded) {
-        setError(
-          `${asset.name} è già stato aggiunto al noleggio.`
-        );
-        return;
+        )
+      ) {
+        return current;
       }
 
-      setRentalAssets(
-        (current) => [
-          ...current,
-          asset,
-        ]
-      );
+      return [
+        ...current,
+        asset,
+      ];
+    });
 
-      setSuccess(
-        `${asset.name} aggiunto al noleggio.`
-      );
+    playScanBeep("success");
 
-    } catch (err) {
+    setSuccess(
+      `${asset.name} aggiunto al noleggio.`
+    );
+  } catch (err) {
+    console.error(
+      "Errore scansione noleggio:",
+      err
+    );
 
-      console.error(
-        "Errore scansione noleggio:",
-        err
-      );
+    playScanBeep("error");
 
-      setError(
-        err?.message ||
-          "Impossibile aggiungere l'asset."
-      );
-    }
+    setError(
+      err?.message ||
+        "Impossibile aggiungere l'asset."
+    );
+  } finally {
+    setTimeout(() => {
+      rentalScanBusyRef.current =
+        false;
+    }, 500);
   }
+}
 
 
   function startRentalScanner() {
@@ -953,6 +1072,13 @@ export default function Warehouse() {
     });
 
     setRentalAssets([]);
+
+    lastRentalScanRef.current = {
+          code: "",
+          timestamp: 0,
+    };
+
+    rentalScanBusyRef.current = false;
 
     setError("");
     setSuccess("");
@@ -1586,7 +1712,10 @@ export default function Warehouse() {
                     return (
                       <tr
                         key={asset.id}
-                        className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition"
+                        onClick={() =>
+                          setDetailAsset(asset)
+                        }
+                        className="border-b border-white/5 last:border-0 hover:bg-white/[0.04] transition cursor-pointer"
                       >
 
                         <td className="px-5 py-4">
@@ -1665,11 +1794,10 @@ export default function Warehouse() {
                         <td className="px-5 py-4 text-right">
 
                           <button
-                            onClick={() =>
-                              setDetailAsset(
-                                asset
-                              )
-                            }
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setDetailAsset(asset);
+                            }}
                             className="p-2 rounded-lg hover:bg-white/10 transition"
                           >
                             <ChevronRight className="w-4 h-4" />
@@ -1918,155 +2046,176 @@ export default function Warehouse() {
         </Modal>
       )}
 
-
-      {/* ===================================================
-          NEW RENTAL — STEP 1
-      =================================================== */}
-
+      {/* =========================================================
+              NEW RENTAL — STEP 1
+          ========================================================= */}
       {rentalStep === "details" && (
         <Modal
           title="Nuovo noleggio"
-          onClose={() =>
-            setRentalStep(null)
-          }
+          onClose={closeRentalWizard}
         >
-
-          <div className="space-y-5">
-
+          <div className="space-y-6">
+            {/* Header */}
             <div>
-              <p className="text-sm font-medium">
-                1. Dati del noleggio
-              </p>
-
-              <p className="text-xs text-white/40 mt-1">
-                Inserisci i dati del cliente prima di iniziare la scansione.
+              <h3 className="text-lg font-semibold text-white">
+                Dati del cliente
+              </h3>
+              <p className="mt-1 text-sm text-white/50">
+                Inserisci i dati del cliente prima di iniziare la scansione
+                degli asset.
               </p>
             </div>
 
+            {/* Form */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Nome cliente */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Nome cliente *
+                </label>
 
-            <Input
-              label="Nome cliente"
-              required
-              value={
-                rentalForm.customerName
-              }
-              onChange={(value) =>
-                setRentalForm(
-                  (current) => ({
-                    ...current,
-                    customerName:
-                      value,
-                  })
-                )
-              }
-              placeholder="Mario Rossi"
-            />
-
-
-            <Input
-              label="Azienda"
-              value={
-                rentalForm.customerCompany
-              }
-              onChange={(value) =>
-                setRentalForm(
-                  (current) => ({
-                    ...current,
-                    customerCompany:
-                      value,
-                  })
-                )
-              }
-              placeholder="Rossi Service"
-            />
-
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-              <Input
-                label="Email"
-                type="email"
-                value={
-                  rentalForm.customerEmail
-                }
-                onChange={(value) =>
-                  setRentalForm(
-                    (current) => ({
+                <input
+                  type="text"
+                  value={rentalForm.customerName}
+                  onChange={(e) =>
+                    setRentalForm((current) => ({
                       ...current,
-                      customerEmail:
-                        value,
-                    })
-                  )
-                }
-                placeholder="email@azienda.it"
-              />
+                      customerName: e.target.value,
+                    }))
+                  }
+                  placeholder="Nome e cognome"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/30 focus:bg-white/[0.07] transition"
+                  autoFocus
+                />
+              </div>
 
+              {/* Azienda */}
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Azienda
+                </label>
 
-              <Input
-                label="Telefono"
-                value={
-                  rentalForm.customerPhone
-                }
-                onChange={(value) =>
-                  setRentalForm(
-                    (current) => ({
+                <input
+                  type="text"
+                  value={rentalForm.customerCompany}
+                  onChange={(e) =>
+                    setRentalForm((current) => ({
                       ...current,
-                      customerPhone:
-                        value,
-                    })
-                  )
-                }
-                placeholder="+39..."
-              />
+                      customerCompany: e.target.value,
+                    }))
+                  }
+                  placeholder="Nome azienda"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/30 focus:bg-white/[0.07] transition"
+                />
+              </div>
 
+              {/* Telefono */}
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Telefono
+                </label>
+
+                <input
+                  type="tel"
+                  value={rentalForm.customerPhone}
+                  onChange={(e) =>
+                    setRentalForm((current) => ({
+                      ...current,
+                      customerPhone: e.target.value,
+                    }))
+                  }
+                  placeholder="+39 ..."
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/30 focus:bg-white/[0.07] transition"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Email
+                </label>
+
+                <input
+                  type="email"
+                  value={rentalForm.customerEmail}
+                  onChange={(e) =>
+                    setRentalForm((current) => ({
+                      ...current,
+                      customerEmail: e.target.value,
+                    }))
+                  }
+                  placeholder="email@esempio.it"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/30 focus:bg-white/[0.07] transition"
+                />
+              </div>
+
+              {/* Data prevista restituzione */}
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Restituzione prevista
+                </label>
+
+                <input
+                  type="datetime-local"
+                  value={rentalForm.expectedReturnAt}
+                  onChange={(e) =>
+                    setRentalForm((current) => ({
+                      ...current,
+                      expectedReturnAt: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-white/30 focus:bg-white/[0.07] transition [color-scheme:dark]"
+                />
+              </div>
+
+              {/* Note */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-white/70 mb-2">
+                  Note
+                </label>
+
+                <textarea
+                  value={rentalForm.notes}
+                  onChange={(e) =>
+                    setRentalForm((current) => ({
+                      ...current,
+                      notes: e.target.value,
+                    }))
+                  }
+                  placeholder="Eventuali note sul noleggio..."
+                  rows={4}
+                  className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/30 focus:bg-white/[0.07] transition"
+                />
+              </div>
             </div>
 
+            {/* Error */}
+            {error && (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
 
-            <Input
-              label="Restituzione prevista"
-              type="datetime-local"
-              value={
-                rentalForm.expectedReturnAt
-              }
-              onChange={(value) =>
-                setRentalForm(
-                  (current) => ({
-                    ...current,
-                    expectedReturnAt:
-                      value,
-                  })
-                )
-              }
-            />
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={closeRentalWizard}
+                className="rounded-xl px-4 py-2.5 text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition"
+              >
+                Annulla
+              </button>
 
-
-            <TextArea
-              label="Note"
-              value={
-                rentalForm.notes
-              }
-              onChange={(value) =>
-                setRentalForm(
-                  (current) => ({
-                    ...current,
-                    notes: value,
-                  })
-                )
-              }
-              placeholder="Note sul noleggio..."
-            />
-
-
-            <button
-              onClick={goToRentalScan}
-              className="w-full py-3 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-2"
-            >
-              Avanti
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
+              <button
+                type="button"
+                onClick={goToRentalScan}
+                disabled={!rentalForm.customerName.trim()}
+                className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                Avanti
+              </button>
+            </div>
           </div>
-
         </Modal>
       )}
 
