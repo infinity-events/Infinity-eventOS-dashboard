@@ -12,8 +12,8 @@ import { UsersIcon } from "./icons/users";
 import { WalletIcon } from "./icons/wallet";
 import { ChartColumnIncreasingIcon } from "./icons/chart-column-increasing";
 import { SettingsIcon } from "./icons/settings";
-import { ShoppingCart } from 'lucide-react';
-import { Package } from "lucide-react";
+import { ShoppingCart } from './icons/shopping-cart';
+import { Package } from "./icons/package";
 
 
 const items = [
