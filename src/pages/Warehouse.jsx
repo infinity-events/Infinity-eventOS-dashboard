@@ -1,82 +1,2823 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import {
-  Archive,
-  ArrowLeftRight,
+  ArrowLeft,
+  ArrowRight,
   CalendarDays,
-  CheckCircle2,
+  Check,
   ChevronRight,
   Clock3,
   FileText,
-  History,
   Package,
   Plus,
   QrCode,
   RefreshCw,
   Search,
-  Truck,
+  Trash2,
   User,
   Users,
   X,
-  Trash2,
 } from "lucide-react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+
+import {
+  Html5Qrcode,
+  Html5QrcodeSupportedFormats,
+} from "html5-qrcode";
+
 import QRCode from "react-qr-code";
 
 import {
   getInventoryStats,
   getInventoryAssets,
   getInventoryAsset,
-  getInventoryRentals,
-  getInventoryMovements,
   createInventoryAsset,
+  getInventoryRentals,
+  getInventoryRental,
   createInventoryRental,
   returnInventoryAsset,
+  getInventoryMovements,
   deleteInventoryAsset,
 } from "../api/inventory";
 
-function downloadAssetLabel(asset) {
-  if (!asset?.assetCode) return;
 
-  const qrSvg = document.querySelector(
-    "#asset-label-qr svg"
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function normalizeQrCode(value) {
+  if (!value) return "";
+
+  const text = String(value).trim();
+
+  const match = text.match(/INV-\d+/i);
+
+  if (match) {
+    return match[0].toUpperCase();
+  }
+
+  try {
+    const url = new URL(text);
+
+    const lastPart = url.pathname
+      .split("/")
+      .filter(Boolean)
+      .pop();
+
+    if (lastPart) {
+      const urlMatch =
+        lastPart.match(/INV-\d+/i);
+
+      if (urlMatch) {
+        return urlMatch[0].toUpperCase();
+      }
+    }
+  } catch {
+    // QR non URL
+  }
+
+  return text.toUpperCase();
+}
+
+
+function statusLabel(status) {
+  switch (status) {
+    case "AVAILABLE":
+      return "Disponibile";
+
+    case "RENTED":
+      return "Noleggiato";
+
+    case "MAINTENANCE":
+      return "Manutenzione";
+
+    case "LOST":
+      return "Smarrimento";
+
+    case "DISMISSED":
+      return "Dismesso";
+
+    default:
+      return status || "—";
+  }
+}
+
+
+function statusClass(status) {
+  switch (status) {
+    case "AVAILABLE":
+      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+
+    case "RENTED":
+      return "bg-orange-500/10 text-orange-400 border-orange-500/20";
+
+    case "MAINTENANCE":
+      return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
+
+    case "LOST":
+      return "bg-red-500/10 text-red-400 border-red-500/20";
+
+    case "DISMISSED":
+      return "bg-white/5 text-white/40 border-white/10";
+
+    default:
+      return "bg-white/5 text-white/50 border-white/10";
+  }
+}
+
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  try {
+    return new Intl.DateTimeFormat(
+      "it-IT",
+      {
+        dateStyle: "short",
+        timeStyle: "short",
+      }
+    ).format(new Date(value));
+  } catch {
+    return "—";
+  }
+}
+
+
+function formatDateOnly(value) {
+  if (!value) return "—";
+
+  try {
+    return new Intl.DateTimeFormat(
+      "it-IT",
+      {
+        dateStyle: "medium",
+      }
+    ).format(new Date(value));
+  } catch {
+    return "—";
+  }
+}
+
+
+/* =========================================================
+   GENERIC MODAL
+========================================================= */
+
+function Modal({
+  title,
+  children,
+  onClose,
+  maxWidth = "max-w-xl",
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div
+        className={`w-full ${maxWidth} max-h-[90vh] rounded-2xl border border-white/10 bg-[#111113] shadow-2xl flex flex-col overflow-hidden`}
+      >
+
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
+          <h2 className="font-semibold">
+            {title}
+          </h2>
+
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/10 transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto min-h-0">
+          {children}
+        </div>
+
+      </div>
+    </div>
   );
+}
+
+
+/* =========================================================
+   ASSET DETAIL MODAL
+========================================================= */
+
+function AssetDetailModal({
+  asset,
+  onClose,
+  onRent,
+  onReturn,
+  onDelete,
+}) {
+  return (
+    <Modal
+      title="Dettaglio asset"
+      onClose={onClose}
+      maxWidth="max-w-lg"
+    >
+      <div className="space-y-5">
+
+        <div>
+          <h3 className="text-2xl font-semibold text-white">
+            {asset.name}
+          </h3>
+
+          <p className="mt-1 text-sm text-white/40 font-mono">
+            {asset.assetCode}
+          </p>
+        </div>
+
+
+        {/* QR */}
+
+        <div className="flex justify-center">
+          <div
+            id="asset-label-qr"
+            className="bg-white p-6 rounded-[28px] inline-flex"
+          >
+            <QRCode
+              value={String(asset.assetCode)}
+              size={280}
+              level="M"
+            />
+          </div>
+        </div>
+
+
+        {/* STATUS / CATEGORY */}
+
+        <div className="grid grid-cols-2 gap-3">
+
+          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+            <p className="text-xs text-white/40">
+              Stato
+            </p>
+
+            <span
+              className={`inline-flex mt-2 px-2.5 py-1 rounded-lg border text-xs ${statusClass(
+                asset.status
+              )}`}
+            >
+              {statusLabel(asset.status)}
+            </span>
+          </div>
+
+
+          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+            <p className="text-xs text-white/40">
+              Categoria
+            </p>
+
+            <p className="mt-1 font-medium">
+              {asset.category || "—"}
+            </p>
+          </div>
+
+        </div>
+
+
+        {asset.description && (
+          <div>
+            <p className="text-xs text-white/40 mb-1">
+              Descrizione
+            </p>
+
+            <p className="text-sm text-white/70">
+              {asset.description}
+            </p>
+          </div>
+        )}
+
+
+        {asset.serialNumber && (
+          <div>
+            <p className="text-xs text-white/40 mb-1">
+              Numero di serie
+            </p>
+
+            <p className="font-mono text-sm">
+              {asset.serialNumber}
+            </p>
+          </div>
+        )}
+
+
+        {/* QR ACTIONS */}
+
+        <div className="grid grid-cols-2 gap-2">
+
+          <button
+            onClick={() =>
+              downloadAssetLabel(asset)
+            }
+            className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
+          >
+            <QrCode className="w-4 h-4" />
+            Scarica PNG
+          </button>
+
+
+          <button
+            onClick={() =>
+              printAssetLabel(asset)
+            }
+            className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            Stampa
+          </button>
+
+        </div>
+
+
+        {/* MAIN ACTIONS */}
+
+        <div className="flex gap-2">
+
+          {asset.status === "AVAILABLE" && (
+            <button
+              onClick={onRent}
+              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
+            >
+              Noleggia
+            </button>
+          )}
+
+
+          {asset.status === "RENTED" && (
+            <button
+              onClick={onReturn}
+              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
+            >
+              Registra restituzione
+            </button>
+          )}
+
+
+          <button
+            onClick={onClose}
+            className="px-5 py-3 rounded-xl bg-white/5 border border-white/10"
+          >
+            Chiudi
+          </button>
+
+        </div>
+
+
+        {/* DELETE */}
+
+        {asset.status !== "RENTED" && (
+          <button
+            onClick={onDelete}
+            className="w-full py-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition flex items-center justify-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Elimina asset
+          </button>
+        )}
+
+      </div>
+    </Modal>
+  );
+}
+
+
+/* =========================================================
+   WAREHOUSE
+========================================================= */
+
+export default function Warehouse() {
+
+  const scannerRef = useRef(null);
+
+
+  /* -------------------------------------------------------
+     DATA
+  ------------------------------------------------------- */
+
+  const [stats, setStats] = useState({
+    total: 0,
+    available: 0,
+    rented: 0,
+    maintenance: 0,
+    lost: 0,
+  });
+
+  const [assets, setAssets] = useState([]);
+  const [rentals, setRentals] = useState([]);
+  const [movements, setMovements] = useState([]);
+
+
+  /* -------------------------------------------------------
+     UI
+  ------------------------------------------------------- */
+
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState("ALL");
+
+
+  /* -------------------------------------------------------
+     MODALS
+  ------------------------------------------------------- */
+
+  const [detailAsset, setDetailAsset] =
+    useState(null);
+
+  const [showCreateAsset, setShowCreateAsset] =
+    useState(false);
+
+  const [showHistory, setShowHistory] =
+    useState(false);
+
+
+  /* -------------------------------------------------------
+     SCANNER
+  ------------------------------------------------------- */
+
+  const [scannerOpen, setScannerOpen] =
+    useState(false);
+
+
+  /* -------------------------------------------------------
+     CREATE ASSET
+  ------------------------------------------------------- */
+
+  const [assetForm, setAssetForm] =
+    useState({
+      name: "",
+      description: "",
+      category: "",
+      serialNumber: "",
+    });
+
+  const [createdAsset, setCreatedAsset] =
+    useState(null);
+
+
+  /* -------------------------------------------------------
+     RENTAL WIZARD
+  ------------------------------------------------------- */
+
+  const [rentalStep, setRentalStep] =
+    useState(null);
+
+  const [rentalForm, setRentalForm] =
+    useState({
+      customerName: "",
+      customerCompany: "",
+      customerEmail: "",
+      customerPhone: "",
+      expectedReturnAt: "",
+      notes: "",
+    });
+
+  const [rentalAssets, setRentalAssets] =
+    useState([]);
+
+
+  /* =======================================================
+     LOAD DATA
+  ======================================================= */
+
+  async function loadData() {
+    try {
+      setLoading(true);
+
+      const [
+        statsData,
+        assetsData,
+        rentalsData,
+        movementsData,
+      ] = await Promise.all([
+        getInventoryStats(),
+        getInventoryAssets(),
+        getInventoryRentals(),
+        getInventoryMovements(),
+      ]);
+
+      setStats(
+        statsData || {
+          total: 0,
+          available: 0,
+          rented: 0,
+          maintenance: 0,
+          lost: 0,
+        }
+      );
+
+      setAssets(
+        Array.isArray(assetsData)
+          ? assetsData
+          : []
+      );
+
+      setRentals(
+        Array.isArray(rentalsData)
+          ? rentalsData
+          : []
+      );
+
+      setMovements(
+        Array.isArray(movementsData)
+          ? movementsData
+          : []
+      );
+
+    } catch (err) {
+      console.error(
+        "Errore caricamento magazzino:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Impossibile caricare il magazzino."
+      );
+
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+
+  /* =======================================================
+     SCANNER
+  ======================================================= */
+
+  function stopScanner() {
+    const scanner =
+      scannerRef.current;
+
+    if (!scanner) return;
+
+    scannerRef.current = null;
+
+    scanner
+      .stop()
+      .then(() => scanner.clear())
+      .catch((error) => {
+        console.warn(
+          "Errore chiusura scanner:",
+          error
+        );
+      });
+  }
+
+
+  async function handleScannedCode(code) {
+    if (!code) {
+      setError("QR non valido.");
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+
+      const normalizedCode =
+        normalizeQrCode(code);
+
+      const asset =
+        await getInventoryAsset(
+          normalizedCode
+        );
+
+      if (!asset) {
+        setError(
+          `Asset ${normalizedCode} non trovato.`
+        );
+        return;
+      }
+
+      setDetailAsset(asset);
+
+    } catch (err) {
+      console.error(
+        "Errore ricerca asset QR:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          `Asset ${code} non trovato nel magazzino.`
+      );
+    }
+  }
+
+
+  function startScanner() {
+    if (scannerRef.current) return;
+
+    setError("");
+    setSuccess("");
+    setScannerOpen(true);
+
+    setTimeout(() => {
+
+      const scanner =
+        new Html5Qrcode(
+          "warehouse-qr-reader"
+        );
+
+      scannerRef.current = scanner;
+
+      scanner
+        .start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+
+            qrbox: (
+              viewfinderWidth,
+              viewfinderHeight
+            ) => {
+
+              const size = Math.floor(
+                Math.min(
+                  viewfinderWidth,
+                  viewfinderHeight
+                ) * 0.8
+              );
+
+              return {
+                width: size,
+                height: size,
+              };
+            },
+
+            aspectRatio: 1,
+
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.QR_CODE,
+            ],
+
+            disableFlip: false,
+          },
+
+          async (decodedText) => {
+
+            if (
+              scannerRef.current !==
+              scanner
+            ) {
+              return;
+            }
+
+            console.log(
+              "QR MAGAZZINO RILEVATO:",
+              decodedText
+            );
+
+            scannerRef.current = null;
+
+            try {
+              await scanner.stop();
+            } catch (error) {
+              console.warn(
+                "Errore stop scanner:",
+                error
+              );
+            }
+
+            try {
+              await scanner.clear();
+            } catch (error) {
+              console.warn(
+                "Errore clear scanner:",
+                error
+              );
+            }
+
+            setScannerOpen(false);
+
+            await handleScannedCode(
+              decodedText
+            );
+          },
+
+          () => null
+        )
+        .catch((error) => {
+
+          console.error(
+            "Errore avvio scanner:",
+            error
+          );
+
+          if (
+            scannerRef.current ===
+            scanner
+          ) {
+            scannerRef.current = null;
+          }
+
+          setScannerOpen(false);
+
+          setError(
+            error?.message ||
+              "Impossibile avviare la fotocamera"
+          );
+        });
+
+    }, 100);
+  }
+
+
+  /* =======================================================
+     RENTAL SCANNER
+  ======================================================= */
+
+  function stopRentalScanner() {
+    const scanner =
+      scannerRef.current;
+
+    if (!scanner) return;
+
+    scannerRef.current = null;
+
+    scanner
+      .stop()
+      .then(() => scanner.clear())
+      .catch((error) => {
+        console.warn(
+          "Errore chiusura scanner noleggio:",
+          error
+        );
+      });
+  }
+
+
+  async function handleRentalScan(code) {
+
+    if (!code) return;
+
+    try {
+
+      setError("");
+      setSuccess("");
+
+      const normalizedCode =
+        normalizeQrCode(code);
+
+      const asset =
+        await getInventoryAsset(
+          normalizedCode
+        );
+
+      if (!asset) {
+        setError(
+          `${normalizedCode} non trovato.`
+        );
+        return;
+      }
+
+      if (
+        asset.status !==
+        "AVAILABLE"
+      ) {
+        setError(
+          `${asset.name} non è disponibile.`
+        );
+        return;
+      }
+
+      const alreadyAdded =
+        rentalAssets.some(
+          (item) =>
+            item.assetCode ===
+            asset.assetCode
+        );
+
+      if (alreadyAdded) {
+        setError(
+          `${asset.name} è già stato aggiunto al noleggio.`
+        );
+        return;
+      }
+
+      setRentalAssets(
+        (current) => [
+          ...current,
+          asset,
+        ]
+      );
+
+      setSuccess(
+        `${asset.name} aggiunto al noleggio.`
+      );
+
+    } catch (err) {
+
+      console.error(
+        "Errore scansione noleggio:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Impossibile aggiungere l'asset."
+      );
+    }
+  }
+
+
+  function startRentalScanner() {
+
+    if (scannerRef.current)
+      return;
+
+    setError("");
+    setSuccess("");
+
+    setTimeout(() => {
+
+      const scanner =
+        new Html5Qrcode(
+          "rental-qr-reader"
+        );
+
+      scannerRef.current =
+        scanner;
+
+      scanner
+        .start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+
+            qrbox: (
+              viewfinderWidth,
+              viewfinderHeight
+            ) => {
+
+              const size = Math.floor(
+                Math.min(
+                  viewfinderWidth,
+                  viewfinderHeight
+                ) * 0.8
+              );
+
+              return {
+                width: size,
+                height: size,
+              };
+            },
+
+            aspectRatio: 1,
+
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.QR_CODE,
+            ],
+
+            disableFlip: false,
+          },
+
+          async (decodedText) => {
+
+            if (
+              scannerRef.current !==
+              scanner
+            ) {
+              return;
+            }
+
+            console.log(
+              "QR NOLEGGIO:",
+              decodedText
+            );
+
+            await handleRentalScan(
+              decodedText
+            );
+
+            /*
+             * NON chiudiamo lo scanner.
+             *
+             * L'operatore continua a
+             * scansionare tutti gli asset.
+             */
+
+          },
+
+          () => null
+        )
+        .catch((error) => {
+
+          console.error(
+            "Errore avvio scanner noleggio:",
+            error
+          );
+
+          if (
+            scannerRef.current ===
+            scanner
+          ) {
+            scannerRef.current = null;
+          }
+
+          setError(
+            error?.message ||
+              "Impossibile avviare la fotocamera."
+          );
+        });
+
+    }, 100);
+  }
+
+
+  /* =======================================================
+     RENTAL WIZARD
+  ======================================================= */
+
+  function openNewRental() {
+
+    stopRentalScanner();
+
+    setRentalForm({
+      customerName: "",
+      customerCompany: "",
+      customerEmail: "",
+      customerPhone: "",
+      expectedReturnAt: "",
+      notes: "",
+    });
+
+    setRentalAssets([]);
+
+    setError("");
+    setSuccess("");
+
+    setRentalStep("details");
+  }
+
+
+  function goToRentalScan() {
+
+    if (
+      !rentalForm.customerName.trim()
+    ) {
+      setError(
+        "Inserisci il nome del cliente."
+      );
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    setRentalStep("scan");
+
+    setTimeout(() => {
+      startRentalScanner();
+    }, 150);
+  }
+
+
+  function finishRentalScan() {
+
+    stopRentalScanner();
+
+    setError("");
+    setSuccess("");
+
+    setRentalStep("summary");
+  }
+
+
+  function addRentalAsset(asset) {
+
+    if (!asset) return;
+
+    const exists =
+      rentalAssets.some(
+        (item) =>
+          item.assetCode ===
+          asset.assetCode
+      );
+
+    if (exists) return;
+
+    setRentalAssets(
+      (current) => [
+        ...current,
+        asset,
+      ]
+    );
+  }
+
+
+  function removeRentalAsset(
+    assetCode
+  ) {
+
+    setRentalAssets(
+      (current) =>
+        current.filter(
+          (asset) =>
+            asset.assetCode !==
+            assetCode
+        )
+    );
+  }
+
+
+  async function completeRental() {
+
+    if (
+      rentalAssets.length === 0
+    ) {
+      setError(
+        "Scansiona almeno un asset."
+      );
+      return;
+    }
+
+    try {
+
+      setError("");
+      setSuccess("");
+
+      await createInventoryRental({
+        ...rentalForm,
+
+        assetCodes:
+          rentalAssets.map(
+            (asset) =>
+              asset.assetCode
+          ),
+      });
+
+      stopRentalScanner();
+
+      setRentalStep(null);
+      setRentalAssets([]);
+
+      await loadData();
+
+      setSuccess(
+        "Noleggio completato correttamente."
+      );
+
+    } catch (err) {
+
+      console.error(
+        "Errore completamento noleggio:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Impossibile completare il noleggio."
+      );
+    }
+  }
+
+
+  /* =======================================================
+     CREATE ASSET
+  ======================================================= */
+
+  async function handleCreateAsset(
+    event
+  ) {
+
+    event?.preventDefault();
+
+    if (!assetForm.name.trim()) {
+      setError(
+        "Inserisci il nome dell'asset."
+      );
+      return;
+    }
+
+    try {
+
+      setError("");
+      setSuccess("");
+
+      const asset =
+        await createInventoryAsset({
+          name:
+            assetForm.name.trim(),
+
+          description:
+            assetForm.description.trim() ||
+            undefined,
+
+          category:
+            assetForm.category.trim() ||
+            undefined,
+
+          serialNumber:
+            assetForm.serialNumber.trim() ||
+            undefined,
+        });
+
+      setCreatedAsset(asset);
+
+      setAssetForm({
+        name: "",
+        description: "",
+        category: "",
+        serialNumber: "",
+      });
+
+      await loadData();
+
+    } catch (err) {
+
+      console.error(
+        "Errore creazione asset:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Impossibile creare l'asset."
+      );
+    }
+  }
+
+
+  /* =======================================================
+     RETURN
+  ======================================================= */
+
+  async function handleReturn(
+    asset
+  ) {
+
+    if (!asset?.assetCode)
+      return;
+
+    const confirmed =
+      window.confirm(
+        `Registrare la restituzione di "${asset.name}"?`
+      );
+
+    if (!confirmed) return;
+
+    try {
+
+      setError("");
+      setSuccess("");
+
+      await returnInventoryAsset(
+        asset.assetCode
+      );
+
+      setDetailAsset(null);
+
+      await loadData();
+
+      setSuccess(
+        `${asset.name} restituito correttamente.`
+      );
+
+    } catch (err) {
+
+      console.error(
+        "Errore restituzione:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Impossibile registrare la restituzione."
+      );
+    }
+  }
+
+
+  /* =======================================================
+     DELETE / DISMISS
+  ======================================================= */
+
+  async function handleDeleteAsset(
+    asset
+  ) {
+
+    if (!asset?.assetCode)
+      return;
+
+    const confirmed =
+      window.confirm(
+        `Sei sicuro di voler eliminare "${asset.name}"?\n\nSe l'asset ha uno storico, verrà dismesso e lo storico verrà conservato.`
+      );
+
+    if (!confirmed)
+      return;
+
+    try {
+
+      setError("");
+      setSuccess("");
+
+      const result =
+        await deleteInventoryAsset(
+          asset.assetCode
+        );
+
+      setDetailAsset(null);
+
+      await loadData();
+
+      if (
+        result?.action ===
+        "DISMISSED"
+      ) {
+        setSuccess(
+          `Asset ${asset.assetCode} dismesso. Lo storico è stato conservato.`
+        );
+      } else {
+        setSuccess(
+          `Asset ${asset.assetCode} eliminato definitivamente.`
+        );
+      }
+
+    } catch (err) {
+
+      console.error(
+        "Errore eliminazione asset:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Impossibile eliminare l'asset."
+      );
+    }
+  }
+
+
+  /* =======================================================
+     FILTER
+  ======================================================= */
+
+  const filteredAssets =
+    assets.filter((asset) => {
+
+      const searchValue =
+        search.trim().toLowerCase();
+
+      const matchesSearch =
+        !searchValue ||
+        asset.name
+          ?.toLowerCase()
+          .includes(searchValue) ||
+        asset.assetCode
+          ?.toLowerCase()
+          .includes(searchValue) ||
+        asset.category
+          ?.toLowerCase()
+          .includes(searchValue) ||
+        asset.serialNumber
+          ?.toLowerCase()
+          .includes(searchValue);
+
+      const matchesStatus =
+        statusFilter === "ALL" ||
+        asset.status === statusFilter;
+
+      return (
+        matchesSearch &&
+        matchesStatus
+      );
+    });
+
+
+  /* =======================================================
+     ACTIVE RENTALS
+  ======================================================= */
+
+  const activeRentals =
+    rentals.filter(
+      (rental) =>
+        rental.status === "ACTIVE"
+    );
+
+
+  /* =======================================================
+     RENDER
+  ======================================================= */
+
+  return (
+    <div className="min-h-screen bg-[#09090B] text-white p-5 sm:p-6 lg:p-8">
+
+      {/* HEADER */}
+
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">
+            Magazzino
+          </h1>
+
+          <p className="mt-1 text-sm text-white/40">
+            Gestione attrezzature e noleggi
+          </p>
+        </div>
+
+
+        <div className="flex flex-wrap gap-2">
+
+          <button
+            onClick={startScanner}
+            className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition flex items-center gap-2"
+          >
+            <QrCode className="w-4 h-4" />
+            Scansiona asset
+          </button>
+
+
+          <button
+            onClick={openNewRental}
+            className="px-4 py-2.5 rounded-xl bg-white text-black font-medium hover:bg-white/90 transition flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Nuovo noleggio
+          </button>
+
+
+          <button
+            onClick={() =>
+              setShowCreateAsset(true)
+            }
+            className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition flex items-center gap-2"
+          >
+            <Package className="w-4 h-4" />
+            Nuovo asset
+          </button>
+
+        </div>
+
+      </div>
+
+
+      {/* FEEDBACK */}
+
+      {error && (
+        <div className="mb-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-start gap-3">
+          <X className="w-4 h-4 mt-0.5 shrink-0" />
+
+          <span className="flex-1">
+            {error}
+          </span>
+
+          <button
+            onClick={() =>
+              setError("")
+            }
+            className="text-red-300/60 hover:text-red-300"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+
+      {success && (
+        <div className="mb-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300 flex items-center gap-3">
+          <Check className="w-4 h-4 shrink-0" />
+
+          <span className="flex-1">
+            {success}
+          </span>
+
+          <button
+            onClick={() =>
+              setSuccess("")
+            }
+            className="text-emerald-300/60 hover:text-emerald-300"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+
+      {/* STATS */}
+
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
+
+        <StatCard
+          label="Totale"
+          value={stats.total}
+          icon={Package}
+        />
+
+        <StatCard
+          label="Disponibili"
+          value={stats.available}
+          icon={Check}
+        />
+
+        <StatCard
+          label="Noleggiati"
+          value={stats.rented}
+          icon={Users}
+        />
+
+        <StatCard
+          label="Manutenzione"
+          value={stats.maintenance}
+          icon={RefreshCw}
+        />
+
+        <StatCard
+          label="Smarrimento"
+          value={stats.lost}
+          icon={X}
+        />
+
+      </div>
+
+
+      {/* ASSETS */}
+
+      <section className="rounded-2xl border border-white/10 bg-[#111113] overflow-hidden">
+
+        <div className="p-5 border-b border-white/10">
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
+            <div>
+              <h2 className="font-semibold">
+                Inventario
+              </h2>
+
+              <p className="text-sm text-white/40 mt-1">
+                Tutti gli asset operativi
+              </p>
+            </div>
+
+
+            <div className="flex flex-col sm:flex-row gap-2">
+
+              <div className="relative">
+
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+
+                <input
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Cerca asset..."
+                  className="w-full sm:w-64 pl-9 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-white/20"
+                />
+
+              </div>
+
+
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value
+                  )
+                }
+                className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 outline-none"
+              >
+                <option value="ALL">
+                  Tutti gli stati
+                </option>
+
+                <option value="AVAILABLE">
+                  Disponibili
+                </option>
+
+                <option value="RENTED">
+                  Noleggiati
+                </option>
+
+                <option value="MAINTENANCE">
+                  Manutenzione
+                </option>
+
+                <option value="LOST">
+                  Smarrimento
+                </option>
+              </select>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {loading ? (
+          <div className="p-12 text-center text-white/40">
+            <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-3" />
+            Caricamento magazzino...
+          </div>
+        ) : filteredAssets.length === 0 ? (
+          <div className="p-12 text-center">
+
+            <Package className="w-10 h-10 mx-auto text-white/20 mb-3" />
+
+            <p className="text-white/50">
+              Nessun asset trovato.
+            </p>
+
+          </div>
+        ) : (
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full">
+
+              <thead>
+                <tr className="text-left text-xs text-white/30 border-b border-white/5">
+
+                  <th className="px-5 py-3 font-medium">
+                    Asset
+                  </th>
+
+                  <th className="px-5 py-3 font-medium">
+                    Codice
+                  </th>
+
+                  <th className="px-5 py-3 font-medium">
+                    Categoria
+                  </th>
+
+                  <th className="px-5 py-3 font-medium">
+                    Stato
+                  </th>
+
+                  <th className="px-5 py-3 font-medium">
+                    Noleggio
+                  </th>
+
+                  <th className="px-5 py-3" />
+
+                </tr>
+              </thead>
+
+
+              <tbody>
+
+                {filteredAssets.map(
+                  (asset) => {
+
+                    const activeRental =
+                      asset.rentalItems?.find(
+                        (item) =>
+                          item.returnedAt ===
+                          null &&
+                          item.rental?.status ===
+                          "ACTIVE"
+                      );
+
+                    return (
+                      <tr
+                        key={asset.id}
+                        className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition"
+                      >
+
+                        <td className="px-5 py-4">
+
+                          <div className="font-medium">
+                            {asset.name}
+                          </div>
+
+                          {asset.description && (
+                            <div className="text-xs text-white/30 mt-1 max-w-xs truncate">
+                              {asset.description}
+                            </div>
+                          )}
+
+                        </td>
+
+
+                        <td className="px-5 py-4">
+
+                          <span className="font-mono text-sm text-white/60">
+                            {asset.assetCode}
+                          </span>
+
+                        </td>
+
+
+                        <td className="px-5 py-4 text-sm text-white/50">
+                          {asset.category || "—"}
+                        </td>
+
+
+                        <td className="px-5 py-4">
+
+                          <span
+                            className={`inline-flex px-2.5 py-1 rounded-lg border text-xs ${statusClass(
+                              asset.status
+                            )}`}
+                          >
+                            {statusLabel(
+                              asset.status
+                            )}
+                          </span>
+
+                        </td>
+
+
+                        <td className="px-5 py-4">
+
+                          {activeRental ? (
+                            <div>
+                              <p className="text-sm">
+                                {
+                                  activeRental
+                                    .rental
+                                    ?.customerName
+                                }
+                              </p>
+
+                              <p className="text-xs text-white/30 mt-1">
+                                {
+                                  activeRental
+                                    .rental
+                                    ?.customerCompany
+                                }
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-white/30">
+                              —
+                            </span>
+                          )}
+
+                        </td>
+
+
+                        <td className="px-5 py-4 text-right">
+
+                          <button
+                            onClick={() =>
+                              setDetailAsset(
+                                asset
+                              )
+                            }
+                            className="p-2 rounded-lg hover:bg-white/10 transition"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+
+                        </td>
+
+                      </tr>
+                    );
+                  }
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        )}
+
+      </section>
+
+
+      {/* ACTIVE RENTALS */}
+
+      <section className="mt-8 rounded-2xl border border-white/10 bg-[#111113] overflow-hidden">
+
+        <div className="p-5 border-b border-white/10 flex items-center justify-between">
+
+          <div>
+            <h2 className="font-semibold">
+              Noleggi attivi
+            </h2>
+
+            <p className="text-sm text-white/40 mt-1">
+              Attrezzatura attualmente fuori dal magazzino
+            </p>
+          </div>
+
+          <span className="text-sm text-white/40">
+            {activeRentals.length}
+          </span>
+
+        </div>
+
+
+        {activeRentals.length === 0 ? (
+          <div className="p-8 text-center text-white/30">
+            Nessun noleggio attivo.
+          </div>
+        ) : (
+
+          <div className="divide-y divide-white/5">
+
+            {activeRentals
+              .slice(0, 10)
+              .map((rental) => (
+
+                <div
+                  key={rental.id}
+                  className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                >
+
+                  <div>
+
+                    <div className="flex items-center gap-2">
+
+                      <User className="w-4 h-4 text-white/30" />
+
+                      <span className="font-medium">
+                        {rental.customerName}
+                      </span>
+
+                    </div>
+
+                    {rental.customerCompany && (
+                      <p className="text-sm text-white/40 mt-1">
+                        {rental.customerCompany}
+                      </p>
+                    )}
+
+                  </div>
+
+
+                  <div className="text-sm text-white/40">
+                    {rental.items?.length || 0} asset
+                  </div>
+
+
+                  <div className="text-sm text-white/40">
+                    {formatDate(
+                      rental.rentedAt
+                    )}
+                  </div>
+
+
+                  <button
+                    onClick={async () => {
+                      try {
+                        const fullRental =
+                          await getInventoryRental(
+                            rental.id
+                          );
+
+                        alert(
+                          `Noleggio: ${
+                            fullRental.customerName
+                          }\nAsset: ${
+                            fullRental.items?.length ||
+                            0
+                          }`
+                        );
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition"
+                  >
+                    Dettagli
+                  </button>
+
+                </div>
+
+              ))}
+
+          </div>
+
+        )}
+
+      </section>
+
+
+      {/* HISTORY */}
+
+      <section className="mt-8 rounded-2xl border border-white/10 bg-[#111113] overflow-hidden">
+
+        <div className="p-5 flex items-center justify-between">
+
+          <div>
+            <h2 className="font-semibold">
+              Attività recente
+            </h2>
+
+            <p className="text-sm text-white/40 mt-1">
+              Ultimi movimenti del magazzino
+            </p>
+          </div>
+
+          <button
+            onClick={() =>
+              setShowHistory(true)
+            }
+            className="text-sm text-white/50 hover:text-white transition"
+          >
+            Vedi tutto
+          </button>
+
+        </div>
+
+
+        <div className="divide-y divide-white/5">
+
+          {movements
+            .slice(0, 5)
+            .map((movement) => (
+
+              <div
+                key={movement.id}
+                className="px-5 py-4 flex items-center gap-3"
+              >
+
+                <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center">
+                  <Clock3 className="w-4 h-4 text-white/40" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+
+                  <p className="text-sm truncate">
+                    {movement.asset?.name ||
+                      movement.assetId}
+                  </p>
+
+                  <p className="text-xs text-white/30 mt-1">
+                    {movement.type}
+                    {" · "}
+                    {formatDate(
+                      movement.createdAt
+                    )}
+                  </p>
+
+                </div>
+
+              </div>
+
+            ))}
+
+          {movements.length === 0 && (
+            <div className="px-5 py-8 text-center text-white/30">
+              Nessun movimento.
+            </div>
+          )}
+
+        </div>
+
+      </section>
+
+
+      {/* ===================================================
+          SCANNER MODAL
+      =================================================== */}
+
+      {scannerOpen && (
+        <Modal
+          title="Scansiona asset"
+          onClose={() => {
+            stopScanner();
+            setScannerOpen(false);
+          }}
+          maxWidth="max-w-xl"
+        >
+
+          <div className="space-y-4">
+
+            <div
+              id="warehouse-qr-reader"
+              className="w-full overflow-hidden rounded-2xl"
+            />
+
+            <p className="text-center text-sm text-white/40">
+              Inquadra il QR dell'asset.
+            </p>
+
+
+            <button
+              onClick={() => {
+                stopScanner();
+                setScannerOpen(false);
+              }}
+              className="w-full py-3 rounded-xl bg-white/5 border border-white/10"
+            >
+              Chiudi
+            </button>
+
+          </div>
+
+        </Modal>
+      )}
+
+
+      {/* ===================================================
+          NEW RENTAL — STEP 1
+      =================================================== */}
+
+      {rentalStep === "details" && (
+        <Modal
+          title="Nuovo noleggio"
+          onClose={() =>
+            setRentalStep(null)
+          }
+        >
+
+          <div className="space-y-5">
+
+            <div>
+              <p className="text-sm font-medium">
+                1. Dati del noleggio
+              </p>
+
+              <p className="text-xs text-white/40 mt-1">
+                Inserisci i dati del cliente prima di iniziare la scansione.
+              </p>
+            </div>
+
+
+            <Input
+              label="Nome cliente"
+              required
+              value={
+                rentalForm.customerName
+              }
+              onChange={(value) =>
+                setRentalForm(
+                  (current) => ({
+                    ...current,
+                    customerName:
+                      value,
+                  })
+                )
+              }
+              placeholder="Mario Rossi"
+            />
+
+
+            <Input
+              label="Azienda"
+              value={
+                rentalForm.customerCompany
+              }
+              onChange={(value) =>
+                setRentalForm(
+                  (current) => ({
+                    ...current,
+                    customerCompany:
+                      value,
+                  })
+                )
+              }
+              placeholder="Rossi Service"
+            />
+
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+              <Input
+                label="Email"
+                type="email"
+                value={
+                  rentalForm.customerEmail
+                }
+                onChange={(value) =>
+                  setRentalForm(
+                    (current) => ({
+                      ...current,
+                      customerEmail:
+                        value,
+                    })
+                  )
+                }
+                placeholder="email@azienda.it"
+              />
+
+
+              <Input
+                label="Telefono"
+                value={
+                  rentalForm.customerPhone
+                }
+                onChange={(value) =>
+                  setRentalForm(
+                    (current) => ({
+                      ...current,
+                      customerPhone:
+                        value,
+                    })
+                  )
+                }
+                placeholder="+39..."
+              />
+
+            </div>
+
+
+            <Input
+              label="Restituzione prevista"
+              type="datetime-local"
+              value={
+                rentalForm.expectedReturnAt
+              }
+              onChange={(value) =>
+                setRentalForm(
+                  (current) => ({
+                    ...current,
+                    expectedReturnAt:
+                      value,
+                  })
+                )
+              }
+            />
+
+
+            <TextArea
+              label="Note"
+              value={
+                rentalForm.notes
+              }
+              onChange={(value) =>
+                setRentalForm(
+                  (current) => ({
+                    ...current,
+                    notes: value,
+                  })
+                )
+              }
+              placeholder="Note sul noleggio..."
+            />
+
+
+            <button
+              onClick={goToRentalScan}
+              className="w-full py-3 rounded-xl bg-white text-black font-medium flex items-center justify-center gap-2"
+            >
+              Avanti
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+          </div>
+
+        </Modal>
+      )}
+
+
+      {/* ===================================================
+          NEW RENTAL — STEP 2
+      =================================================== */}
+
+      {rentalStep === "scan" && (
+        <Modal
+          title="Scansione asset"
+          onClose={() => {
+            stopRentalScanner();
+            setRentalStep(null);
+          }}
+          maxWidth="max-w-xl"
+        >
+
+          <div className="space-y-4">
+
+            <div>
+              <p className="text-sm font-medium">
+                2. Scansiona l'attrezzatura
+              </p>
+
+              <p className="text-xs text-white/40 mt-1">
+                Scansiona in sequenza tutti gli asset richiesti dal cliente.
+              </p>
+            </div>
+
+
+            <div
+              id="rental-qr-reader"
+              className="w-full overflow-hidden rounded-2xl"
+            />
+
+
+            <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+
+              <div className="flex items-center justify-between mb-3">
+
+                <span className="text-sm text-white/50">
+                  Asset scansionati
+                </span>
+
+                <span className="font-semibold">
+                  {rentalAssets.length}
+                </span>
+
+              </div>
+
+
+              {rentalAssets.length === 0 ? (
+                <p className="text-sm text-white/30">
+                  Nessun asset scansionato.
+                </p>
+              ) : (
+
+                <div className="space-y-2">
+
+                  {rentalAssets.map(
+                    (asset) => (
+
+                      <div
+                        key={asset.assetCode}
+                        className="flex items-center gap-3 rounded-xl bg-black/20 p-3"
+                      >
+
+                        <Package className="w-4 h-4 text-white/40" />
+
+                        <div className="flex-1 min-w-0">
+
+                          <p className="text-sm truncate">
+                            {asset.name}
+                          </p>
+
+                          <p className="text-xs text-white/30 font-mono">
+                            {asset.assetCode}
+                          </p>
+
+                        </div>
+
+                        <Check className="w-4 h-4 text-emerald-400" />
+
+                      </div>
+
+                    )
+                  )}
+
+                </div>
+
+              )}
+
+            </div>
+
+
+            <button
+              onClick={finishRentalScan}
+              className="w-full py-3 rounded-xl bg-white text-black font-medium"
+            >
+              Fine
+            </button>
+
+          </div>
+
+        </Modal>
+      )}
+
+
+      {/* ===================================================
+          NEW RENTAL — STEP 3
+      =================================================== */}
+
+      {rentalStep === "summary" && (
+        <Modal
+          title="Riepilogo noleggio"
+          onClose={() =>
+            setRentalStep(null)
+          }
+          maxWidth="max-w-xl"
+        >
+
+          <div className="space-y-5">
+
+            <div>
+              <p className="text-sm font-medium">
+                3. Controlla e completa
+              </p>
+
+              <p className="text-xs text-white/40 mt-1">
+                Verifica gli asset prima di confermare il noleggio.
+              </p>
+            </div>
+
+
+            {/* CUSTOMER */}
+
+            <div className="rounded-xl bg-white/5 border border-white/10 p-4">
+
+              <div className="flex items-start gap-3">
+
+                <User className="w-4 h-4 mt-0.5 text-white/40" />
+
+                <div>
+
+                  <p className="font-medium">
+                    {rentalForm.customerName}
+                  </p>
+
+                  {rentalForm.customerCompany && (
+                    <p className="text-sm text-white/40 mt-1">
+                      {rentalForm.customerCompany}
+                    </p>
+                  )}
+
+                  {rentalForm.customerEmail && (
+                    <p className="text-sm text-white/40 mt-1">
+                      {rentalForm.customerEmail}
+                    </p>
+                  )}
+
+                  {rentalForm.customerPhone && (
+                    <p className="text-sm text-white/40 mt-1">
+                      {rentalForm.customerPhone}
+                    </p>
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {/* ASSETS */}
+
+            <div>
+
+              <div className="flex items-center justify-between mb-3">
+
+                <div>
+                  <p className="text-sm font-medium">
+                    Asset noleggiati
+                  </p>
+
+                  <p className="text-xs text-white/30 mt-1">
+                    {rentalAssets.length} asset
+                  </p>
+                </div>
+
+              </div>
+
+
+              {rentalAssets.length === 0 ? (
+
+                <div className="rounded-xl border border-dashed border-white/10 p-6 text-center">
+
+                  <Package className="w-8 h-8 mx-auto text-white/20 mb-2" />
+
+                  <p className="text-sm text-white/40">
+                    Nessun asset selezionato.
+                  </p>
+
+                </div>
+
+              ) : (
+
+                <div className="space-y-2">
+
+                  {rentalAssets.map(
+                    (asset) => (
+
+                      <div
+                        key={asset.assetCode}
+                        className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 p-3"
+                      >
+
+                        <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+
+                          <Package className="w-4 h-4 text-white/50" />
+
+                        </div>
+
+
+                        <div className="flex-1 min-w-0">
+
+                          <p className="text-sm font-medium truncate">
+                            {asset.name}
+                          </p>
+
+                          <p className="text-xs text-white/30 font-mono mt-1">
+                            {asset.assetCode}
+                          </p>
+
+                        </div>
+
+
+                        <button
+                          onClick={() =>
+                            removeRentalAsset(
+                              asset.assetCode
+                            )
+                          }
+                          className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition"
+                          title="Rimuovi asset"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+
+                      </div>
+
+                    )
+                  )}
+
+                </div>
+
+              )}
+
+            </div>
+
+
+            {/* ADD */}
+
+            <button
+              onClick={() => {
+
+                setRentalStep("scan");
+
+                setTimeout(() => {
+                  startRentalScanner();
+                }, 150);
+
+              }}
+              className="w-full py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition flex items-center justify-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Aggiungi asset
+            </button>
+
+
+            {/* RETURN DATE */}
+
+            {rentalForm.expectedReturnAt && (
+              <div className="flex items-center gap-3 text-sm text-white/50">
+
+                <CalendarDays className="w-4 h-4" />
+
+                Restituzione prevista:
+
+                <span className="text-white">
+                  {formatDate(
+                    rentalForm.expectedReturnAt
+                  )}
+                </span>
+
+              </div>
+            )}
+
+
+            {/* COMPLETE */}
+
+            <button
+              onClick={completeRental}
+              disabled={
+                rentalAssets.length === 0
+              }
+              className="w-full py-3 rounded-xl bg-white text-black font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Completa noleggio
+            </button>
+
+
+            <button
+              onClick={() =>
+                setRentalStep("details")
+              }
+              className="w-full py-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Modifica dati
+            </button>
+
+          </div>
+
+        </Modal>
+      )}
+
+
+      {/* ===================================================
+          CREATE ASSET
+      =================================================== */}
+
+      {showCreateAsset && !createdAsset && (
+        <Modal
+          title="Nuovo asset"
+          onClose={() =>
+            setShowCreateAsset(false)
+          }
+        >
+
+          <form
+            onSubmit={
+              handleCreateAsset
+            }
+            className="space-y-5"
+          >
+
+            <Input
+              label="Nome asset"
+              required
+              value={assetForm.name}
+              onChange={(value) =>
+                setAssetForm(
+                  (current) => ({
+                    ...current,
+                    name: value,
+                  })
+                )
+              }
+              placeholder="Case Cavi 1"
+            />
+
+
+            <Input
+              label="Categoria"
+              value={
+                assetForm.category
+              }
+              onChange={(value) =>
+                setAssetForm(
+                  (current) => ({
+                    ...current,
+                    category: value,
+                  })
+                )
+              }
+              placeholder="Casse, Rack, Luci..."
+            />
+
+
+            <Input
+              label="Numero di serie"
+              value={
+                assetForm.serialNumber
+              }
+              onChange={(value) =>
+                setAssetForm(
+                  (current) => ({
+                    ...current,
+                    serialNumber: value,
+                  })
+                )
+              }
+              placeholder="Seriale..."
+            />
+
+
+            <TextArea
+              label="Descrizione"
+              value={
+                assetForm.description
+              }
+              onChange={(value) =>
+                setAssetForm(
+                  (current) => ({
+                    ...current,
+                    description: value,
+                  })
+                )
+              }
+              placeholder="Descrizione dell'attrezzatura..."
+            />
+
+
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl bg-white text-black font-medium"
+            >
+              Crea asset
+            </button>
+
+          </form>
+
+        </Modal>
+      )}
+
+
+      {/* ===================================================
+          CREATED ASSET
+      =================================================== */}
+
+      {showCreateAsset &&
+        createdAsset && (
+          <Modal
+            title="Asset creato"
+            onClose={() => {
+              setShowCreateAsset(false);
+              setCreatedAsset(null);
+            }}
+            maxWidth="max-w-lg"
+          >
+
+            <div className="space-y-5 text-center">
+
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
+
+                <Check className="w-6 h-6 text-emerald-400" />
+
+              </div>
+
+
+              <div>
+
+                <h3 className="text-xl font-semibold">
+                  {createdAsset.name}
+                </h3>
+
+                <p className="mt-1 text-sm text-white/40 font-mono">
+                  {createdAsset.assetCode}
+                </p>
+
+              </div>
+
+
+              <div className="bg-white p-6 rounded-[28px] inline-flex">
+
+                <QRCode
+                  value={String(
+                    createdAsset.assetCode
+                  )}
+                  size={280}
+                  level="M"
+                />
+
+              </div>
+
+
+              <p className="text-sm text-white/40">
+                Questo QR identifica in modo univoco l'asset.
+              </p>
+
+
+              <button
+                onClick={() => {
+                  setShowCreateAsset(false);
+                  setCreatedAsset(null);
+                }}
+                className="w-full py-3 rounded-xl bg-white text-black font-medium"
+              >
+                Fine
+              </button>
+
+            </div>
+
+          </Modal>
+        )}
+
+
+      {/* ===================================================
+          HISTORY MODAL
+      =================================================== */}
+
+      {showHistory && (
+        <Modal
+          title="Storico magazzino"
+          onClose={() =>
+            setShowHistory(false)
+          }
+          maxWidth="max-w-2xl"
+        >
+
+          <div className="space-y-2">
+
+            {movements.length === 0 ? (
+
+              <div className="py-10 text-center text-white/30">
+                Nessun movimento.
+              </div>
+
+            ) : (
+
+              movements.map(
+                (movement) => (
+
+                  <div
+                    key={movement.id}
+                    className="rounded-xl bg-white/5 border border-white/10 p-4"
+                  >
+
+                    <div className="flex items-start gap-3">
+
+                      <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+
+                        <Clock3 className="w-4 h-4 text-white/40" />
+
+                      </div>
+
+
+                      <div className="flex-1 min-w-0">
+
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+
+                          <p className="font-medium">
+                            {movement.asset?.name ||
+                              movement.assetId}
+                          </p>
+
+                          <span className="text-xs text-white/30">
+                            {formatDate(
+                              movement.createdAt
+                            )}
+                          </span>
+
+                        </div>
+
+
+                        <p className="text-xs text-white/40 mt-1">
+                          {movement.type}
+                        </p>
+
+
+                        {movement.note && (
+                          <p className="text-sm text-white/50 mt-2">
+                            {movement.note}
+                          </p>
+                        )}
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                )
+              )
+
+            )}
+
+          </div>
+
+        </Modal>
+      )}
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   SMALL COMPONENTS
+========================================================= */
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#111113] p-4">
+
+      <div className="flex items-center justify-between">
+
+        <span className="text-sm text-white/40">
+          {label}
+        </span>
+
+        <Icon className="w-4 h-4 text-white/30" />
+
+      </div>
+
+      <p className="text-2xl font-semibold mt-3">
+        {value}
+      </p>
+
+    </div>
+  );
+}
+
+
+function Input({
+  label,
+  required = false,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}) {
+  return (
+    <label className="block">
+
+      <span className="block text-xs text-white/40 mb-2">
+        {label}
+        {required && (
+          <span className="text-red-400 ml-1">
+            *
+          </span>
+        )}
+      </span>
+
+      <input
+        type={type}
+        value={value}
+        onChange={(event) =>
+          onChange(
+            event.target.value
+          )
+        }
+        placeholder={placeholder}
+        className="w-full px-3 py-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-white/20 placeholder:text-white/20"
+      />
+
+    </label>
+  );
+}
+
+
+function TextArea({
+  label,
+  value,
+  onChange,
+  placeholder,
+}) {
+  return (
+    <label className="block">
+
+      <span className="block text-xs text-white/40 mb-2">
+        {label}
+      </span>
+
+      <textarea
+        value={value}
+        onChange={(event) =>
+          onChange(
+            event.target.value
+          )
+        }
+        placeholder={placeholder}
+        rows={4}
+        className="w-full px-3 py-3 rounded-xl bg-white/5 border border-white/10 outline-none focus:border-white/20 placeholder:text-white/20 resize-none"
+      />
+
+    </label>
+  );
+}
+
+
+/* =========================================================
+   QR LABEL DOWNLOAD
+========================================================= */
+
+function downloadAssetLabel(asset) {
+
+  if (!asset?.assetCode)
+    return;
+
+  const qrSvg =
+    document.querySelector(
+      "#asset-label-qr svg"
+    );
 
   if (!qrSvg) {
-    alert("QR non ancora disponibile.");
+    alert(
+      "QR non ancora disponibile."
+    );
     return;
   }
 
-  const svgData = new XMLSerializer().serializeToString(qrSvg);
+  const svgData =
+    new XMLSerializer()
+      .serializeToString(qrSvg);
 
-  const svgBlob = new Blob(
-    [svgData],
-    {
-      type: "image/svg+xml;charset=utf-8",
-    }
-  );
+  const svgBlob =
+    new Blob(
+      [svgData],
+      {
+        type:
+          "image/svg+xml;charset=utf-8",
+      }
+    );
 
-  const url = URL.createObjectURL(svgBlob);
+  const url =
+    URL.createObjectURL(
+      svgBlob
+    );
 
-  const img = new Image();
+  const img =
+    new Image();
 
   img.onload = () => {
+
     const width = 1000;
     const height = 1200;
 
-    const canvas = document.createElement("canvas");
+    const canvas =
+      document.createElement(
+        "canvas"
+      );
 
     canvas.width = width;
     canvas.height = height;
 
-    const ctx = canvas.getContext("2d");
+    const ctx =
+      canvas.getContext("2d");
 
     if (!ctx) {
       URL.revokeObjectURL(url);
       return;
     }
 
-    // Sfondo
     ctx.fillStyle = "#ffffff";
+
     ctx.fillRect(
       0,
       0,
@@ -84,14 +2825,20 @@ function downloadAssetLabel(asset) {
       height
     );
 
-    // Nome
+
+    /* NAME */
+
     ctx.fillStyle = "#111111";
     ctx.textAlign = "center";
-    ctx.font = "bold 64px Arial";
+    ctx.font =
+      "bold 64px Arial";
 
     const name =
       asset.name?.length > 24
-        ? asset.name.substring(0, 24) + "..."
+        ? asset.name.substring(
+            0,
+            24
+          ) + "..."
         : asset.name;
 
     ctx.fillText(
@@ -100,9 +2847,12 @@ function downloadAssetLabel(asset) {
       130
     );
 
-    // Codice
+
+    /* CODE */
+
     ctx.fillStyle = "#777777";
-    ctx.font = "32px monospace";
+    ctx.font =
+      "32px monospace";
 
     ctx.fillText(
       asset.assetCode,
@@ -110,10 +2860,14 @@ function downloadAssetLabel(asset) {
       185
     );
 
-    // QR
+
+    /* QR */
+
     const qrSize = 650;
+
     const qrX =
       (width - qrSize) / 2;
+
     const qrY = 280;
 
     ctx.drawImage(
@@ -124,8 +2878,12 @@ function downloadAssetLabel(asset) {
       qrSize
     );
 
-    // Bordo QR
-    ctx.strokeStyle = "#eeeeee";
+
+    /* BORDER */
+
+    ctx.strokeStyle =
+      "#eeeeee";
+
     ctx.lineWidth = 8;
 
     const radius = 35;
@@ -142,65 +2900,96 @@ function downloadAssetLabel(asset) {
 
     ctx.stroke();
 
-    // Branding
-    ctx.fillStyle = "#777777";
-    ctx.font = "26px Arial";
+
+    /* BRAND */
+
+    ctx.fillStyle =
+      "#777777";
+
+    ctx.font =
+      "26px Arial";
 
     ctx.fillText(
-      "INFINITY EVENTS",
+      "INFINITY EVENTOS",
       width / 2,
       1050
     );
 
-    // Download
+
+    /* DOWNLOAD */
+
     const link =
-      document.createElement("a");
+      document.createElement(
+        "a"
+      );
 
     link.download =
       `${asset.assetCode}-label.png`;
 
     link.href =
-      canvas.toDataURL("image/png");
+      canvas.toDataURL(
+        "image/png"
+      );
 
     link.click();
 
     URL.revokeObjectURL(url);
   };
 
+
   img.onerror = () => {
+
     URL.revokeObjectURL(url);
-    alert("Impossibile generare il PNG del QR.");
+
+    alert(
+      "Impossibile generare il PNG del QR."
+    );
+
   };
+
 
   img.src = url;
 }
 
-function printAssetLabel(asset) {
-  if (!asset?.assetCode) return;
 
-  const qrSvg = document.querySelector(
-    "#asset-label-qr svg"
-  );
+/* =========================================================
+   PRINT QR LABEL
+========================================================= */
+
+function printAssetLabel(asset) {
+
+  if (!asset?.assetCode)
+    return;
+
+  const qrSvg =
+    document.querySelector(
+      "#asset-label-qr svg"
+    );
 
   if (!qrSvg) {
-    alert("QR non ancora disponibile.");
+    alert(
+      "QR non ancora disponibile."
+    );
     return;
   }
 
   const svgData =
-    new XMLSerializer().serializeToString(
-      qrSvg
+    new XMLSerializer()
+      .serializeToString(qrSvg);
+
+  const svgBlob =
+    new Blob(
+      [svgData],
+      {
+        type:
+          "image/svg+xml;charset=utf-8",
+      }
     );
 
-  const svgBlob = new Blob(
-    [svgData],
-    {
-      type: "image/svg+xml;charset=utf-8",
-    }
-  );
-
   const qrUrl =
-    URL.createObjectURL(svgBlob);
+    URL.createObjectURL(
+      svgBlob
+    );
 
   const printWindow =
     window.open(
@@ -210,7 +2999,10 @@ function printAssetLabel(asset) {
     );
 
   if (!printWindow) {
-    URL.revokeObjectURL(qrUrl);
+
+    URL.revokeObjectURL(
+      qrUrl
+    );
 
     alert(
       "Il browser ha bloccato la finestra di stampa."
@@ -219,23 +3011,48 @@ function printAssetLabel(asset) {
     return;
   }
 
+
   const safeName =
-    String(asset.name || "")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "");
+    String(
+      asset.name || ""
+    )
+      .replace(
+        /</g,
+        "&lt;"
+      )
+      .replace(
+        />/g,
+        ""
+      );
+
 
   const safeCode =
-    String(asset.assetCode || "")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+    String(
+      asset.assetCode || ""
+    )
+      .replace(
+        /</g,
+        "&lt;"
+      )
+      .replace(
+        />/g,
+        "&gt;"
+      );
+
 
   printWindow.document.write(`
     <!DOCTYPE html>
+
     <html>
+
       <head>
-        <title>${safeCode}</title>
+
+        <title>
+          ${safeCode}
+        </title>
 
         <style>
+
           @page {
             size: 100mm 120mm;
             margin: 0;
@@ -297,8 +3114,11 @@ function printAssetLabel(asset) {
             letter-spacing: 1px;
             color: #888;
           }
+
         </style>
+
       </head>
+
 
       <body>
 
@@ -313,10 +3133,12 @@ function printAssetLabel(asset) {
           </div>
 
           <div class="qr-wrapper">
+
             <img
               class="qr"
               src="${qrUrl}"
             />
+
           </div>
 
           <div class="brand">
@@ -325,1786 +3147,46 @@ function printAssetLabel(asset) {
 
         </div>
 
+
         <script>
 
-          window.onload = function() {
+          window.onload =
+            function() {
 
-            setTimeout(function() {
-              window.print();
-            }, 500);
+              setTimeout(
+                function() {
 
-          };
+                  window.print();
 
-          window.onafterprint = function() {
-            window.close();
-          };
+                },
+                500
+              );
+
+            };
+
+
+          window.onafterprint =
+            function() {
+
+              window.close();
+
+            };
 
         </script>
 
       </body>
+
     </html>
   `);
 
   printWindow.document.close();
 
+
   setTimeout(() => {
-    URL.revokeObjectURL(qrUrl);
+
+    URL.revokeObjectURL(
+      qrUrl
+    );
+
   }, 5000);
-}
-
-function normalizeQrCode(value) {
-  if (!value) return "";
-
-  const text = String(value).trim();
-
-  const match = text.match(/INV-\d+/i);
-  if (match) {
-    return match[0].toUpperCase();
-  }
-
-  try {
-    const url = new URL(text);
-    const lastPart = url.pathname.split("/").filter(Boolean).pop();
-
-    if (lastPart) {
-      const urlMatch = lastPart.match(/INV-\d+/i);
-      if (urlMatch) return urlMatch[0].toUpperCase();
-    }
-  } catch {
-    // QR non URL
-  }
-
-  return text.toUpperCase();
-}
-
-function statusLabel(status) {
-  switch (status) {
-    case "AVAILABLE":
-      return "Disponibile";
-
-    case "RENTED":
-      return "Noleggiato";
-
-    case "MAINTENANCE":
-      return "Manutenzione";
-
-    case "LOST":
-      return "Smarrimento";
-
-    case "DISMISSED":
-      return "Dismesso";
-
-    default:
-      return status;
-  }
-}
-
-function statusClass(status) {
-  switch (status) {
-    case "AVAILABLE":
-      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-    case "RENTED":
-      return "bg-orange-500/10 text-orange-400 border-orange-500/20";
-    case "MAINTENANCE":
-      return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
-    case "LOST":
-      return "bg-red-500/10 text-red-400 border-red-500/20";
-    case "DISMISSED":
-      return "bg-white/5 text-white/40 border-white/10";
-    default:
-      return "bg-white/5 text-white/60 border-white/10";
-  }
-}
-
-function formatDate(value) {
-  if (!value) return "-";
-
-  return new Date(value).toLocaleString("it-IT", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
-
-function getActiveRental(asset) {
-  return asset?.rentalItems?.find(
-    (item) =>
-      !item.returnedAt &&
-      item.rental?.status === "ACTIVE",
-  )?.rental;
-}
-
-export default function Warehouse() {
-  const scannerRef = useRef(null);
-
-  const [stats, setStats] = useState(null);
-  const [assets, setAssets] = useState([]);
-  const [rentals, setRentals] = useState([]);
-  const [movements, setMovements] = useState([]);
-
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-
-  const [selectedAssets, setSelectedAssets] = useState([]);
-
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [manualCode, setManualCode] = useState("");
-
-  const [detailAsset, setDetailAsset] = useState(null);
-  const [rentalModalOpen, setRentalModalOpen] = useState(false);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
-
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  async function loadData(showRefresh = false) {
-    try {
-      if (showRefresh) setRefreshing(true);
-      else setLoading(true);
-
-      const [
-        statsData,
-        assetsData,
-        rentalsData,
-        movementsData,
-      ] = await Promise.all([
-        getInventoryStats(),
-        getInventoryAssets(),
-        getInventoryRentals(),
-        getInventoryMovements(),
-      ]);
-
-      setStats(statsData);
-      setAssets(assetsData || []);
-      setRentals(rentalsData || []);
-      setMovements(movementsData || []);
-    } catch (err) {
-      console.error(err);
-      setError(
-        err?.message || "Errore caricamento magazzino",
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      stopScanner();
-    };
-  }, []);
-
-  function stopScanner() {
-  const scanner = scannerRef.current;
-
-  if (!scanner) return;
-
-  scannerRef.current = null;
-
-  scanner
-    .stop()
-    .then(() => scanner.clear())
-    .catch((error) => {
-      console.warn(
-        "Errore chiusura scanner:",
-        error
-      );
-    });
-}
-
-  function startScanner() {
-  if (scannerRef.current) return;
-
-  setError("");
-  setSuccess("");
-  setScannerOpen(true);
-
-  setTimeout(() => {
-    const scanner =
-      new Html5Qrcode(
-        "warehouse-qr-reader"
-      );
-
-    scannerRef.current = scanner;
-
-    scanner
-      .start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-
-          qrbox: (
-            viewfinderWidth,
-            viewfinderHeight
-          ) => {
-            const size = Math.floor(
-              Math.min(
-                viewfinderWidth,
-                viewfinderHeight
-              ) * 0.8
-            );
-
-            return {
-              width: size,
-              height: size,
-            };
-          },
-
-          aspectRatio: 1,
-
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.QR_CODE,
-          ],
-
-          disableFlip: false,
-        },
-
-        async (decodedText) => {
-          if (
-            scannerRef.current !== scanner
-          ) {
-            return;
-          }
-
-          console.log(
-            "QR MAGAZZINO RILEVATO:",
-            decodedText
-          );
-
-          scannerRef.current = null;
-
-          try {
-            await scanner.stop();
-          } catch (error) {
-            console.warn(
-              "Errore stop scanner:",
-              error
-            );
-          }
-
-          try {
-            await scanner.clear();
-          } catch (error) {
-            console.warn(
-              "Errore clear scanner:",
-              error
-            );
-          }
-
-          setScannerOpen(false);
-
-          await handleScannedCode(
-            decodedText
-          );
-        },
-
-        () => null
-      )
-      .catch((error) => {
-        console.error(
-          "Errore avvio scanner:",
-          error
-        );
-
-        if (
-          scannerRef.current === scanner
-        ) {
-          scannerRef.current = null;
-        }
-
-        setScannerOpen(false);
-
-        setError(
-          error?.message ||
-            "Impossibile avviare la fotocamera"
-        );
-      });
-  }, 100);
-}
-
-  async function handleScannedCode(code) {
-  if (!code) {
-    setError("QR non valido.");
-    return;
-  }
-
-  try {
-    setError("");
-    setSuccess("");
-
-    const normalizedCode =
-      normalizeQrCode(code);
-
-    console.log(
-      "QR MAGAZZINO LETTO:",
-      normalizedCode
-    );
-
-    const asset =
-      await getInventoryAsset(
-        normalizedCode
-      );
-
-    if (!asset) {
-      setError(
-        `Asset ${normalizedCode} non trovato.`
-      );
-      return;
-    }
-
-    setDetailAsset(asset);
-  } catch (err) {
-    console.error(
-      "Errore ricerca asset QR:",
-      err
-    );
-
-    setError(
-      err?.message ||
-        `Asset ${code} non trovato nel magazzino.`
-    );
-  }
-}
-
-async function handleDeleteAsset(asset) {
-  if (!asset?.assetCode) return;
-
-  const confirmed = window.confirm(
-    `Sei sicuro di voler eliminare "${asset.name}"?\n\nSe l'asset ha uno storico, verrà dismesso e lo storico verrà conservato.`
-  );
-
-  if (!confirmed) return;
-
-  try {
-    setError("");
-    setSuccess("");
-
-    const result =
-      await deleteInventoryAsset(
-        asset.assetCode
-      );
-
-    setDetailAsset(null);
-
-    await loadData();
-
-    if (result?.action === "DISMISSED") {
-      setSuccess(
-        `Asset ${asset.assetCode} dismesso. Lo storico è stato conservato.`
-      );
-    } else {
-      setSuccess(
-        `Asset ${asset.assetCode} eliminato definitivamente.`
-      );
-    }
-  } catch (err) {
-    console.error(
-      "Errore eliminazione asset:",
-      err
-    );
-
-    setError(
-      err?.message ||
-        "Impossibile eliminare l'asset."
-    );
-  }
-}
-  function handleManualSearch() {
-    const code = normalizeQrCode(manualCode);
-
-    if (!code) return;
-
-    handleScannedCode(code);
-    setManualCode("");
-  }
-
-  function toggleAsset(asset) {
-    if (asset.status !== "AVAILABLE") return;
-
-    setSelectedAssets((current) => {
-      if (current.includes(asset.assetCode)) {
-        return current.filter(
-          (code) => code !== asset.assetCode,
-        );
-      }
-
-      return [...current, asset.assetCode];
-    });
-  }
-
-  function selectSingleAsset(asset) {
-    if (asset.status !== "AVAILABLE") return;
-
-    setSelectedAssets([asset.assetCode]);
-    setDetailAsset(null);
-    setRentalModalOpen(true);
-  }
-
-  function openRentalForSelected() {
-    if (!selectedAssets.length) {
-      setError("Seleziona almeno un asset.");
-      return;
-    }
-
-    setRentalModalOpen(true);
-  }
-
-  async function handleReturn(asset) {
-    if (!asset?.assetCode) return;
-
-    const confirmed = window.confirm(
-      `Confermi la restituzione di ${asset.assetCode}?`,
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setError("");
-      setSuccess("");
-
-      await returnInventoryAsset(asset.assetCode);
-
-      setSuccess(
-        `${asset.assetCode} restituito correttamente.`,
-      );
-
-      setDetailAsset(null);
-
-      await loadData(true);
-    } catch (err) {
-      console.error(err);
-      setError(
-        err?.message ||
-          "Errore durante la restituzione",
-      );
-    }
-  }
-
-  const filteredAssets = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return assets.filter((asset) => {
-      const matchesSearch =
-        !query ||
-        asset.assetCode
-          ?.toLowerCase()
-          .includes(query) ||
-        asset.name
-          ?.toLowerCase()
-          .includes(query) ||
-        asset.category
-          ?.toLowerCase()
-          .includes(query) ||
-        asset.serialNumber
-          ?.toLowerCase()
-          .includes(query);
-
-      const matchesStatus =
-        statusFilter === "ALL" ||
-        asset.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [assets, search, statusFilter]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#09090B] text-white p-8">
-        <div className="flex items-center gap-3 text-white/60">
-          <RefreshCw className="w-5 h-5 animate-spin" />
-          Caricamento magazzino...
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#09090B] text-white p-6 lg:p-8">
-      <div className="max-w-[1600px] mx-auto space-y-6">
-
-        {/* HEADER */}
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center">
-                <Package className="w-5 h-5" />
-              </div>
-
-              <div>
-                <h1 className="text-2xl font-semibold">
-                  Magazzino
-                </h1>
-
-                <p className="text-sm text-white/40">
-                  Gestione attrezzatura e noleggi
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => loadData(true)}
-              disabled={refreshing}
-              className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition flex items-center gap-2"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${
-                  refreshing
-                    ? "animate-spin"
-                    : ""
-                }`}
-              />
-              Aggiorna
-            </button>
-
-            <button
-              onClick={startScanner}
-              className="px-4 py-2.5 rounded-xl bg-white text-black hover:bg-white/90 transition flex items-center gap-2 font-medium"
-            >
-              <QrCode className="w-4 h-4" />
-              Scansiona QR
-            </button>
-
-            <button
-              onClick={() => setCreateModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Nuovo asset
-            </button>
-          </div>
-        </div>
-
-        {/* ALERTS */}
-        {error && (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 px-4 py-3 flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError("")}>
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {success && (
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300 px-4 py-3 flex items-center justify-between">
-            <span>{success}</span>
-            <button onClick={() => setSuccess("")}>
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* STATS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            icon={Archive}
-            label="Totale asset"
-            value={stats?.total ?? assets.length}
-          />
-
-          <StatCard
-            icon={CheckCircle2}
-            label="Disponibili"
-            value={stats?.available ?? 0}
-          />
-
-          <StatCard
-            icon={Truck}
-            label="Noleggiati"
-            value={stats?.rented ?? 0}
-          />
-
-          <StatCard
-            icon={Clock3}
-            label="Manutenzione"
-            value={stats?.maintenance ?? 0}
-          />
-        </div>
-
-        {/* QUICK ACTIONS */}
-        <div className="grid lg:grid-cols-3 gap-4">
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <QrCode className="w-5 h-5" />
-              <div>
-                <h2 className="font-medium">
-                  Cerca tramite QR
-                </h2>
-                <p className="text-xs text-white/40">
-                  Scansiona il codice dell'attrezzatura
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={startScanner}
-              className="w-full rounded-xl bg-white text-black py-3 font-medium hover:bg-white/90 transition"
-            >
-              Apri fotocamera
-            </button>
-          </div>
-
-          <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <Search className="w-5 h-5" />
-              <div>
-                <h2 className="font-medium">
-                  Ricerca manuale
-                </h2>
-                <p className="text-xs text-white/40">
-                  Inserisci il codice INV dell'asset
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                value={manualCode}
-                onChange={(e) =>
-                  setManualCode(e.target.value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleManualSearch();
-                  }
-                }}
-                placeholder="es. INV-000001"
-                className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/30"
-              />
-
-              <button
-                onClick={handleManualSearch}
-                className="px-5 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15"
-              >
-                Cerca
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ASSETS */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
-
-          <div className="p-5 border-b border-white/10 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
-            <div>
-              <h2 className="font-semibold">
-                Attrezzatura
-              </h2>
-              <p className="text-sm text-white/40">
-                {filteredAssets.length} asset visualizzati
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-
-                <input
-                  value={search}
-                  onChange={(e) =>
-                    setSearch(e.target.value)
-                  }
-                  placeholder="Cerca..."
-                  className="w-56 bg-black/20 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 outline-none"
-                />
-              </div>
-
-              <select
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value)
-                }
-                className="bg-[#111113] border border-white/10 rounded-xl px-3 py-2.5 outline-none"
-              >
-                <option value="ALL">
-                  Tutti
-                </option>
-                <option value="AVAILABLE">
-                  Disponibili
-                </option>
-                <option value="RENTED">
-                  Noleggiati
-                </option>
-                <option value="MAINTENANCE">
-                  Manutenzione
-                </option>
-                <option value="LOST">
-                  Smarriti
-                </option>
-              </select>
-            </div>
-          </div>
-
-          {selectedAssets.length > 0 && (
-            <div className="px-5 py-3 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
-              <div className="text-sm text-white/60">
-                <strong className="text-white">
-                  {selectedAssets.length}
-                </strong>{" "}
-                asset selezionati
-              </div>
-
-              <button
-                onClick={openRentalForSelected}
-                className="px-4 py-2 rounded-xl bg-white text-black text-sm font-medium flex items-center gap-2"
-              >
-                <ArrowLeftRight className="w-4 h-4" />
-                Crea noleggio
-              </button>
-            </div>
-          )}
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-xs text-white/30 border-b border-white/10">
-                  <th className="px-5 py-4 w-10"></th>
-                  <th className="px-5 py-4">
-                    Asset
-                  </th>
-                  <th className="px-5 py-4">
-                    Categoria
-                  </th>
-                  <th className="px-5 py-4">
-                    Stato
-                  </th>
-                  <th className="px-5 py-4">
-                    Noleggiato a
-                  </th>
-                  <th className="px-5 py-4"></th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredAssets.map((asset) => {
-                  const rental =
-                    getActiveRental(asset);
-
-                  const selected =
-                    selectedAssets.includes(
-                      asset.assetCode,
-                    );
-
-                  return (
-                    <tr
-                      key={asset.id}
-                      className="border-b border-white/5 hover:bg-white/[0.02] transition"
-                    >
-                      <td className="px-5 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          disabled={
-                            asset.status !== "AVAILABLE"
-                          }
-                          onChange={() =>
-                            toggleAsset(asset)
-                          }
-                          className="w-4 h-4 accent-white"
-                        />
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <button
-                          onClick={() =>
-                            setDetailAsset(asset)
-                          }
-                          className="text-left"
-                        >
-                          <div className="font-medium">
-                            {asset.name}
-                          </div>
-
-                          <div className="text-xs text-white/30 mt-1 font-mono">
-                            {asset.assetCode}
-                          </div>
-                        </button>
-                      </td>
-
-                      <td className="px-5 py-4 text-sm text-white/50">
-                        {asset.category || "-"}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-lg border text-xs ${statusClass(
-                            asset.status,
-                          )}`}
-                        >
-                          {statusLabel(asset.status)}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4 text-sm">
-                        {rental ? (
-                          <div>
-                            <div>
-                              {rental.customerName}
-                            </div>
-
-                            {rental.customerCompany && (
-                              <div className="text-xs text-white/30">
-                                {
-                                  rental.customerCompany
-                                }
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-white/20">
-                            -
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-5 py-4 text-right">
-                        <button
-                          onClick={() =>
-                            setDetailAsset(asset)
-                          }
-                          className="p-2 rounded-lg hover:bg-white/10"
-                        >
-                          <ChevronRight className="w-4 h-4 text-white/40" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {!filteredAssets.length && (
-              <div className="py-16 text-center text-white/30">
-                Nessun asset trovato.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* BOTTOM */}
-        <div className="grid lg:grid-cols-2 gap-4">
-
-          {/* RENTALS */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="font-semibold">
-                  Noleggi attivi
-                </h2>
-                <p className="text-sm text-white/40">
-                  Attrezzatura attualmente fuori
-                </p>
-              </div>
-
-              <Users className="w-5 h-5 text-white/30" />
-            </div>
-
-            <div className="space-y-2">
-              {rentals
-                .filter(
-                  (rental) =>
-                    rental.status === "ACTIVE",
-                )
-                .slice(0, 5)
-                .map((rental) => (
-                  <div
-                    key={rental.id}
-                    className="rounded-xl border border-white/5 bg-black/20 p-4"
-                  >
-                    <div className="flex justify-between gap-4">
-                      <div>
-                        <div className="font-medium">
-                          {rental.customerName}
-                        </div>
-
-                        {rental.customerCompany && (
-                          <div className="text-xs text-white/40">
-                            {
-                              rental.customerCompany
-                            }
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="text-xs text-white/30">
-                        {formatDate(
-                          rental.rentedAt,
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {rental.items?.map((item) => (
-                        <span
-                          key={item.id}
-                          className="px-2 py-1 rounded-md bg-white/5 text-xs font-mono text-white/50"
-                        >
-                          {item.asset?.assetCode ||
-                            item.assetId}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-
-              {!rentals.some(
-                (rental) =>
-                  rental.status === "ACTIVE",
-              ) && (
-                <div className="py-8 text-center text-white/25 text-sm">
-                  Nessun noleggio attivo.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* HISTORY */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="font-semibold">
-                  Ultimi movimenti
-                </h2>
-                <p className="text-sm text-white/40">
-                  Attività recenti del magazzino
-                </p>
-              </div>
-
-              <button
-                onClick={() =>
-                  setHistoryOpen(true)
-                }
-                className="text-xs text-white/50 hover:text-white"
-              >
-                Vedi tutto
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {movements
-                .slice(0, 6)
-                .map((movement) => (
-                  <div
-                    key={movement.id}
-                    className="flex items-center gap-3 rounded-xl bg-black/20 p-3"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center">
-                      <History className="w-4 h-4 text-white/40" />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm">
-                        {movement.type}
-                      </div>
-
-                      <div className="text-xs text-white/30 truncate">
-                        {movement.asset?.assetCode ||
-                          movement.assetId}
-                      </div>
-                    </div>
-
-                    <div className="text-xs text-white/25">
-                      {formatDate(
-                        movement.createdAt,
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-              {!movements.length && (
-                <div className="py-8 text-center text-white/25 text-sm">
-                  Nessun movimento.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* SCANNER MODAL */}
-      {scannerOpen && (
-        <Modal
-          title="Scansiona asset"
-          onClose={() => {
-            stopScanner();
-            setScannerOpen(false);
-          }}
-        >
-          <div
-            id="warehouse-qr-reader"
-            className="overflow-hidden rounded-xl bg-black min-h-[320px]"
-          />
-
-          <p className="text-sm text-white/40 text-center mt-4">
-            Inquadra il QR dell'attrezzatura.
-          </p>
-        </Modal>
-      )}
-
-      {/* DETAIL MODAL */}
-      {detailAsset && (
-        <AssetDetailModal
-          asset={detailAsset}
-          onClose={() =>
-            setDetailAsset(null)
-          }
-          onRent={() =>
-            selectSingleAsset(detailAsset)
-          }
-          onReturn={() =>
-            handleReturn(detailAsset)
-          }
-          onDelete={() =>
-            handleDeleteAsset(detailAsset)
-        }
-        />
-      )}
-
-      {/* CREATE MODAL */}
-      {createModalOpen && (
-        <CreateAssetModal
-          onClose={() =>
-            setCreateModalOpen(false)
-          }
-          onCreated={async (created) => {
-            setCreateModalOpen(false);
-            setSuccess(
-              `${created.name} creato come ${created.assetCode}.`,
-            );
-            await loadData(true);
-            setDetailAsset(created);
-          }}
-        />
-      )}
-
-      {/* RENTAL MODAL */}
-      {rentalModalOpen && (
-        <RentalModal
-          assetCodes={selectedAssets}
-          onClose={() =>
-            setRentalModalOpen(false)
-          }
-          onCreated={async () => {
-            setRentalModalOpen(false);
-            setSelectedAssets([]);
-            setSuccess(
-              "Noleggio registrato correttamente.",
-            );
-            await loadData(true);
-          }}
-        />
-      )}
-
-      {/* HISTORY MODAL */}
-      {historyOpen && (
-        <Modal
-          title="Storico magazzino"
-          onClose={() =>
-            setHistoryOpen(false)
-          }
-        >
-          <div className="space-y-2 max-h-[65vh] overflow-y-auto">
-            {movements.map((movement) => (
-              <div
-                key={movement.id}
-                className="border border-white/5 rounded-xl p-4 bg-black/20"
-              >
-                <div className="flex justify-between gap-4">
-                  <div>
-                    <div className="font-medium">
-                      {movement.type}
-                    </div>
-
-                    <div className="text-xs text-white/40 mt-1 font-mono">
-                      {movement.asset?.assetCode ||
-                        movement.assetId}
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-white/30">
-                    {formatDate(
-                      movement.createdAt,
-                    )}
-                  </div>
-                </div>
-
-                {movement.note && (
-                  <div className="text-sm text-white/50 mt-3">
-                    {movement.note}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-white/40">
-          {label}
-        </div>
-
-        <Icon className="w-4 h-4 text-white/30" />
-      </div>
-
-      <div className="text-3xl font-semibold mt-3">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function Modal({
-  title,
-  children,
-  onClose,
-}) {
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-xl max-h-[90vh] rounded-2xl border border-white/10 bg-[#111113] shadow-2xl flex flex-col overflow-hidden">
-
-        {/* HEADER */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
-          <h2 className="font-semibold">
-            {title}
-          </h2>
-
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/10"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* CONTENT */}
-        <div className="p-5 overflow-y-auto min-h-0">
-          {children}
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-function AssetDetailModal({
-  asset,
-  onClose,
-  onRent,
-  onReturn,
-  onDelete,
-}) {
-  return (
-    <Modal
-      title="Dettaglio asset"
-      onClose={onClose}
-    >
-      <div className="space-y-5">
-
-        {/* NOME */}
-        <div>
-          <h3 className="text-2xl font-semibold text-white">
-            {asset.name}
-          </h3>
-
-          <p className="mt-1 text-sm text-white/40 font-mono">
-            {asset.assetCode}
-          </p>
-        </div>
-
-        {/* QR */}
-        <div className="flex justify-center">
-          <div
-            id="asset-label-qr"
-            className="bg-white p-6 rounded-[28px] inline-flex"
-          >
-            <QRCode
-              value={String(asset.assetCode)}
-              size={280}
-              level="M"
-            />
-          </div>
-        </div>
-
-        {/* INFO */}
-        <div className="grid grid-cols-2 gap-3">
-
-          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-            <p className="text-xs text-white/40">
-              Stato
-            </p>
-
-            <p className="mt-1 font-medium">
-              {statusLabel(asset.status)}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-            <p className="text-xs text-white/40">
-              Categoria
-            </p>
-
-            <p className="mt-1 font-medium">
-              {asset.category || "—"}
-            </p>
-          </div>
-
-        </div>
-
-        {asset.description && (
-          <div>
-            <p className="text-xs text-white/40 mb-1">
-              Descrizione
-            </p>
-
-            <p className="text-sm text-white/70">
-              {asset.description}
-            </p>
-          </div>
-        )}
-
-        {asset.serialNumber && (
-          <div>
-            <p className="text-xs text-white/40 mb-1">
-              Numero di serie
-            </p>
-
-            <p className="font-mono text-sm">
-              {asset.serialNumber}
-            </p>
-          </div>
-        )}
-
-        {/* AZIONI QR */}
-        <div className="grid grid-cols-2 gap-2">
-
-          <button
-            onClick={() =>
-              downloadAssetLabel(asset)
-            }
-            className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
-          >
-            <QrCode className="w-4 h-4" />
-            Scarica PNG
-          </button>
-
-          <button
-            onClick={() =>
-              printAssetLabel(asset)
-            }
-            className="py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center justify-center gap-2"
-          >
-            <FileText className="w-4 h-4" />
-            Stampa
-          </button>
-
-        </div>
-
-        {/* AZIONI PRINCIPALI */}
-        <div className="flex gap-2">
-
-          {asset.status === "AVAILABLE" && (
-            <button
-              onClick={onRent}
-              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
-            >
-              Noleggia
-            </button>
-          )}
-
-          {asset.status === "RENTED" && (
-            <button
-              onClick={onReturn}
-              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
-            >
-              Registra restituzione
-            </button>
-          )}
-
-          <button
-            onClick={onClose}
-            className="px-5 py-3 rounded-xl bg-white/5 border border-white/10"
-          >
-            Chiudi
-          </button>
-
-        </div>
-
-        {/* ELIMINA */}
-        {asset.status !== "RENTED" && (
-          <button
-            onClick={onDelete}
-            className="w-full py-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition flex items-center justify-center gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Elimina asset
-          </button>
-        )}
-
-      </div>
-    </Modal>
-  );
-}
-
-function Info({
-  label,
-  value,
-}) {
-  return (
-    <div className="rounded-xl bg-white/[0.03] p-3">
-      <div className="text-xs text-white/30">
-        {label}
-      </div>
-
-      <div className="text-sm mt-1">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function CreateAssetModal({
-  onClose,
-  onCreated,
-}) {
-  const [form, setForm] = useState({
-    name: "",
-    category: "",
-    serialNumber: "",
-    description: "",
-  });
-
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [created, setCreated] = useState(null);
-
-  function update(field, value) {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  }
-
-  async function submit(e) {
-    e.preventDefault();
-
-    if (!form.name.trim()) {
-      setError("Inserisci il nome dell'asset.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError("");
-
-      const result =
-        await createInventoryAsset({
-          name: form.name.trim(),
-          category:
-            form.category.trim() || undefined,
-          serialNumber:
-            form.serialNumber.trim() ||
-            undefined,
-          description:
-            form.description.trim() ||
-            undefined,
-        });
-
-      setCreated(result);
-    } catch (err) {
-      console.error(err);
-      setError(
-        err?.message ||
-          "Errore creazione asset",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (created) {
-    return (
-      <Modal
-        title="Asset creato"
-        onClose={() =>
-          onCreated(created)
-        }
-      >
-        <div className="text-center space-y-5">
-          <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-400" />
-
-          <div>
-            <div className="font-semibold text-lg">
-              {created.name}
-            </div>
-
-            <div className="font-mono text-white/40 mt-1">
-              {created.assetCode}
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <div className="bg-white p-5 rounded-2xl">
-              <QRCode
-                value={created.assetCode}
-                size={180}
-              />
-            </div>
-          </div>
-
-          <p className="text-sm text-white/40">
-            Questo QR identifica permanentemente
-            l'attrezzatura.
-          </p>
-
-          <button
-            onClick={() =>
-              onCreated(created)
-            }
-            className="w-full py-3 rounded-xl bg-white text-black font-medium"
-          >
-            Fine
-          </button>
-        </div>
-      </Modal>
-    );
-  }
-
-  return (
-    <Modal
-      title="Nuovo asset"
-      onClose={onClose}
-    >
-      <form
-        onSubmit={submit}
-        className="space-y-4"
-      >
-        {error && (
-          <div className="rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 p-3 text-sm">
-            {error}
-          </div>
-        )}
-
-        <Field
-          label="Nome asset"
-          value={form.name}
-          onChange={(value) =>
-            update("name", value)
-          }
-          placeholder="es. Case Cavi 1"
-          required
-        />
-
-        <Field
-          label="Categoria"
-          value={form.category}
-          onChange={(value) =>
-            update("category", value)
-          }
-          placeholder="es. Audio, Luci, Strutture"
-        />
-
-        <Field
-          label="Numero seriale"
-          value={form.serialNumber}
-          onChange={(value) =>
-            update(
-              "serialNumber",
-              value,
-            )
-          }
-          placeholder="Opzionale"
-        />
-
-        <div>
-          <label className="text-xs text-white/40">
-            Descrizione
-          </label>
-
-          <textarea
-            value={form.description}
-            onChange={(e) =>
-              update(
-                "description",
-                e.target.value,
-              )
-            }
-            rows={3}
-            placeholder="Note sull'attrezzatura..."
-            className="mt-1 w-full bg-black/20 border border-white/10 rounded-xl px-3 py-3 outline-none resize-none"
-          />
-        </div>
-
-        <button
-          disabled={saving}
-          className="w-full py-3 rounded-xl bg-white text-black font-medium disabled:opacity-50"
-        >
-          {saving
-            ? "Creazione..."
-            : "Crea asset"}
-        </button>
-      </form>
-    </Modal>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  required,
-}) {
-  return (
-    <div>
-      <label className="text-xs text-white/40">
-        {label}
-      </label>
-
-      <input
-        value={value}
-        required={required}
-        onChange={(e) =>
-          onChange(e.target.value)
-        }
-        placeholder={placeholder}
-        className="mt-1 w-full bg-black/20 border border-white/10 rounded-xl px-3 py-3 outline-none focus:border-white/30"
-      />
-    </div>
-  );
-}
-
-function RentalModal({
-  assetCodes,
-  onClose,
-  onCreated,
-}) {
-  const [form, setForm] = useState({
-    customerName: "",
-    customerCompany: "",
-    customerEmail: "",
-    customerPhone: "",
-    expectedReturnAt: "",
-    notes: "",
-  });
-
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  function update(field, value) {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  }
-
-  async function submit(e) {
-    e.preventDefault();
-
-    if (!form.customerName.trim()) {
-      setError(
-        "Inserisci il nome del cliente.",
-      );
-      return;
-    }
-
-    if (!assetCodes.length) {
-      setError(
-        "Nessun asset selezionato.",
-      );
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError("");
-
-      await createInventoryRental({
-        assetCodes,
-        customerName:
-          form.customerName.trim(),
-        customerCompany:
-          form.customerCompany.trim() ||
-          undefined,
-        customerEmail:
-          form.customerEmail.trim() ||
-          undefined,
-        customerPhone:
-          form.customerPhone.trim() ||
-          undefined,
-        expectedReturnAt:
-          form.expectedReturnAt
-            ? new Date(
-                form.expectedReturnAt,
-              ).toISOString()
-            : undefined,
-        notes:
-          form.notes.trim() ||
-          undefined,
-      });
-
-      await onCreated();
-    } catch (err) {
-      console.error(err);
-      setError(
-        err?.message ||
-          "Errore creazione noleggio",
-      );
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Modal
-      title="Nuovo noleggio"
-      onClose={onClose}
-    >
-      <form
-        onSubmit={submit}
-        className="space-y-4"
-      >
-        {error && (
-          <div className="rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 p-3 text-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="rounded-xl bg-white/[0.03] border border-white/10 p-4">
-          <div className="text-xs text-white/30 mb-2">
-            ASSET SELEZIONATI
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {assetCodes.map((code) => (
-              <span
-                key={code}
-                className="px-2.5 py-1.5 rounded-lg bg-white/5 font-mono text-xs text-white/60"
-              >
-                {code}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <Field
-          label="Cliente"
-          value={form.customerName}
-          onChange={(value) =>
-            update(
-              "customerName",
-              value,
-            )
-          }
-          placeholder="Nome e cognome"
-          required
-        />
-
-        <Field
-          label="Azienda"
-          value={form.customerCompany}
-          onChange={(value) =>
-            update(
-              "customerCompany",
-              value,
-            )
-          }
-          placeholder="Opzionale"
-        />
-
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Field
-            label="Email"
-            value={form.customerEmail}
-            onChange={(value) =>
-              update(
-                "customerEmail",
-                value,
-              )
-            }
-            placeholder="cliente@email.it"
-          />
-
-          <Field
-            label="Telefono"
-            value={form.customerPhone}
-            onChange={(value) =>
-              update(
-                "customerPhone",
-                value,
-              )
-            }
-            placeholder="+39..."
-          />
-        </div>
-
-        <div>
-          <label className="text-xs text-white/40">
-            Data prevista restituzione
-          </label>
-
-          <input
-            type="datetime-local"
-            value={
-              form.expectedReturnAt
-            }
-            onChange={(e) =>
-              update(
-                "expectedReturnAt",
-                e.target.value,
-              )
-            }
-            className="mt-1 w-full bg-black/20 border border-white/10 rounded-xl px-3 py-3 outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs text-white/40">
-            Note
-          </label>
-
-          <textarea
-            value={form.notes}
-            onChange={(e) =>
-              update(
-                "notes",
-                e.target.value,
-              )
-            }
-            rows={3}
-            className="mt-1 w-full bg-black/20 border border-white/10 rounded-xl px-3 py-3 outline-none resize-none"
-          />
-        </div>
-
-        <button
-          disabled={saving}
-          className="w-full py-3 rounded-xl bg-white text-black font-medium disabled:opacity-50"
-        >
-          {saving
-            ? "Registrazione..."
-            : "Conferma noleggio"}
-        </button>
-      </form>
-    </Modal>
-  );
 }

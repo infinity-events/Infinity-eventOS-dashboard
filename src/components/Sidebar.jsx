@@ -12,8 +12,8 @@ import { UsersIcon } from "./icons/users";
 import { WalletIcon } from "./icons/wallet";
 import { ChartColumnIncreasingIcon } from "./icons/chart-column-increasing";
 import { SettingsIcon } from "./icons/settings";
-import { ShoppingCart } from './icons/shopping-cart';
-import { Package } from "./icons/package";
+import { ShoppingCartIcon } from './icons/shopping-cart';
+import { PackageIcon } from "./icons/package";
 
 
 const items = [
@@ -62,7 +62,7 @@ const items = [
   {
     name: "POS",
     path: "/pos",
-    icon: ShoppingCart,
+    icon: ShoppingCartIcon,
     roles: [
       "ADMIN",
       "AZIENDA",
@@ -85,7 +85,7 @@ const items = [
   {
     name: "Magazzino",
     path: "/magazzino",
-    icon: Package,
+    icon: PackageIcon,
     roles: ["ADMIN"],
   },
 ];
