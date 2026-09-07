@@ -259,40 +259,95 @@ function AssetDetailModal({
   onRent,
   onReturn,
   onDelete,
+  onSaved,
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+
   const [form, setForm] = useState({
-    name: asset.name || "",
-    description: asset.description || "",
-    category: asset.category || "",
-    serialNumber: asset.serialNumber || "",
+    name: asset?.name || "",
+    description: asset?.description || "",
+    category: asset?.category || "",
+    serialNumber: asset?.serialNumber || "",
   });
 
-  async function saveChanges() {
-    if (!form.name.trim()) return;
+  useEffect(() => {
+    if (!asset) return;
 
-    try {
-      setSaving(true);
-      await updateInventoryAsset(asset.assetCode, form);
-      setEditing(false);
-      window.location.reload();
-    } catch (error) {
-      console.error("Errore aggiornamento asset:", error);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function cancelEdit() {
     setForm({
       name: asset.name || "",
       description: asset.description || "",
       category: asset.category || "",
       serialNumber: asset.serialNumber || "",
     });
+
+    setEditing(false);
+  }, [asset]);
+
+  function handleChange(field, value) {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function cancelEdit() {
+    if (!asset) return;
+
+    setForm({
+      name: asset.name || "",
+      description: asset.description || "",
+      category: asset.category || "",
+      serialNumber: asset.serialNumber || "",
+    });
+
     setEditing(false);
   }
+
+  async function saveChanges() {
+    if (!asset) return;
+
+    const name = form.name.trim();
+
+    if (!name) {
+      alert("Il nome dell'asset è obbligatorio.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const updatedAsset = await updateInventoryAsset(
+        asset.assetCode,
+        {
+          name,
+          description: form.description.trim(),
+          category: form.category.trim(),
+          serialNumber: form.serialNumber.trim(),
+        }
+      );
+
+      setEditing(false);
+
+      if (onSaved) {
+        onSaved(updatedAsset);
+      }
+    } catch (error) {
+      console.error(
+        "Errore aggiornamento asset:",
+        error
+      );
+
+      alert(
+        error?.message ||
+          "Impossibile aggiornare l'asset."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!asset) return null;
 
   return (
     <Modal
@@ -302,38 +357,80 @@ function AssetDetailModal({
     >
       <div className="space-y-5">
 
-        <div>
-          <h3 className="text-2xl font-semibold text-white">
-            {asset.name}
-          </h3>
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
-          <p className="mt-1 text-sm text-white/40 font-mono">
-            {asset.assetCode}
-          </p>
-        </div>
+        <div className="flex items-start justify-between gap-4">
 
+          <div className="min-w-0 flex-1">
 
-        {/* QR */}
+            {editing ? (
+              <div>
+                <label className="block text-xs text-white/40 mb-1">
+                  Nome asset
+                </label>
 
-        <div className="flex justify-center">
-          <div
-            id="asset-label-qr"
-            className="bg-white p-6 rounded-[28px] inline-flex"
-          >
-            <QRCode
-              value={String(asset.assetCode)}
-              size={280}
-              level="M"
-            />
+                <input
+                  value={form.name}
+                  onChange={(e) =>
+                    handleChange(
+                      "name",
+                      e.target.value
+                    )
+                  }
+                  autoFocus
+                  className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-lg font-semibold text-white outline-none focus:border-white/30"
+                />
+              </div>
+            ) : (
+              <>
+                <h3 className="text-2xl font-semibold text-white">
+                  {asset.name}
+                </h3>
+
+                <p className="mt-1 text-sm text-white/40 font-mono">
+                  {asset.assetCode}
+                </p>
+              </>
+            )}
+
           </div>
+
+          {!editing && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="shrink-0 px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition text-sm"
+            >
+              Modifica
+            </button>
+          )}
+
         </div>
 
 
-        {/* STATUS / CATEGORY */}
+        {/* =================================================
+            CODICE / STATO
+        ================================================= */}
 
         <div className="grid grid-cols-2 gap-3">
 
           <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+
+            <p className="text-xs text-white/40">
+              Codice asset
+            </p>
+
+            <p className="mt-1 font-mono text-sm text-white">
+              {asset.assetCode}
+            </p>
+
+          </div>
+
+
+          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+
             <p className="text-xs text-white/40">
               Stato
             </p>
@@ -345,100 +442,170 @@ function AssetDetailModal({
             >
               {statusLabel(asset.status)}
             </span>
-          </div>
 
-
-          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-            <p className="text-xs text-white/40">
-              Categoria
-            </p>
-
-            <p className="mt-1 font-medium">
-              {asset.category || "—"}
-            </p>
           </div>
 
         </div>
 
 
-        {asset.description && (
-          <div>
-            <p className="text-xs text-white/40 mb-1">
-              Descrizione
-            </p>
+        {/* =================================================
+            QR
+        ================================================= */}
 
-            <p className="text-sm text-white/70">
-              {asset.description}
-            </p>
+        <div className="flex justify-center">
+
+          <div
+            id="asset-label-qr"
+            className="bg-white p-6 rounded-[28px] inline-flex"
+          >
+
+            <QRCode
+              value={String(asset.assetCode)}
+              size={280}
+              level="M"
+            />
+
           </div>
-        )}
+
+        </div>
 
 
-        {asset.serialNumber && (
-          <div>
-            <p className="text-xs text-white/40 mb-1">
-              Numero di serie
-            </p>
+        {/* =================================================
+            DATI ASSET
+        ================================================= */}
 
-            <p className="font-mono text-sm">
-              {asset.serialNumber}
-            </p>
-          </div>
-        )}
+        {!editing ? (
 
+          <div className="space-y-4">
 
-        {editing && (
-          <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-            <div>
-              <label className="text-xs text-white/40">Nome</label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
-              />
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+
+              <p className="text-xs text-white/40">
+                Categoria
+              </p>
+
+              <p className="mt-1 font-medium">
+                {asset.category || "—"}
+              </p>
+
             </div>
 
+
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+
+              <p className="text-xs text-white/40">
+                Descrizione
+              </p>
+
+              <p className="mt-1 text-sm text-white/70 whitespace-pre-wrap">
+                {asset.description || "—"}
+              </p>
+
+            </div>
+
+
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+
+              <p className="text-xs text-white/40">
+                Numero di serie
+              </p>
+
+              <p className="mt-1 font-mono text-sm">
+                {asset.serialNumber || "—"}
+              </p>
+
+            </div>
+
+          </div>
+
+        ) : (
+
+          <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+
+            {/* CATEGORIA */}
+
             <div>
-              <label className="text-xs text-white/40">Descrizione</label>
+
+              <label className="block text-xs text-white/40 mb-1">
+                Categoria
+              </label>
+
+              <input
+                value={form.category}
+                onChange={(e) =>
+                  handleChange(
+                    "category",
+                    e.target.value
+                  )
+                }
+                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
+              />
+
+            </div>
+
+
+            {/* DESCRIZIONE */}
+
+            <div>
+
+              <label className="block text-xs text-white/40 mb-1">
+                Descrizione
+              </label>
+
               <textarea
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={3}
-                className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30 resize-none"
+                onChange={(e) =>
+                  handleChange(
+                    "description",
+                    e.target.value
+                  )
+                }
+                rows={4}
+                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30 resize-none"
               />
+
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-white/40">Categoria</label>
-                <input
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
-                />
-              </div>
 
-              <div>
-                <label className="text-xs text-white/40">Numero di serie</label>
-                <input
-                  value={form.serialNumber}
-                  onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
-                  className="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
-                />
-              </div>
+            {/* SERIALE */}
+
+            <div>
+
+              <label className="block text-xs text-white/40 mb-1">
+                Numero di serie
+              </label>
+
+              <input
+                value={form.serialNumber}
+                onChange={(e) =>
+                  handleChange(
+                    "serialNumber",
+                    e.target.value
+                  )
+                }
+                className="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm font-mono text-white outline-none focus:border-white/30"
+              />
+
             </div>
 
-            <p className="text-xs text-white/35">
-              Codice asset e stato non sono modificabili.
+
+            <p className="text-xs text-white/30">
+              Il codice asset e lo stato non possono essere modificati.
             </p>
+
           </div>
+
         )}
 
-        {/* QR ACTIONS */}
+
+        {/* =================================================
+            QR ACTIONS
+        ================================================= */}
 
         <div className="grid grid-cols-2 gap-2">
 
           <button
+            type="button"
             onClick={() =>
               downloadAssetLabel(asset)
             }
@@ -450,6 +617,7 @@ function AssetDetailModal({
 
 
           <button
+            type="button"
             onClick={() =>
               printAssetLabel(asset)
             }
@@ -462,80 +630,94 @@ function AssetDetailModal({
         </div>
 
 
-        {/* MAIN ACTIONS */}
+        {/* =================================================
+            AZIONI
+        ================================================= */}
 
-        <div className="flex gap-2">
+        {editing ? (
 
-          {asset.status === "AVAILABLE" && (
+          <div className="flex gap-2">
+
             <button
-              onClick={onRent}
-              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
+              type="button"
+              onClick={cancelEdit}
+              disabled={saving}
+              className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition disabled:opacity-50"
             >
-              Noleggia
+              Annulla
             </button>
-          )}
 
 
-          {asset.status === "RENTED" && (
             <button
-              onClick={onReturn}
-              className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
+              type="button"
+              onClick={saveChanges}
+              disabled={
+                saving ||
+                !form.name.trim()
+              }
+              className="flex-1 py-3 rounded-xl bg-white text-black font-medium hover:bg-white/90 transition disabled:opacity-50"
             >
-              Registra restituzione
+              {saving
+                ? "Salvataggio..."
+                : "Salva modifiche"}
             </button>
-          )}
 
+          </div>
 
-          {!editing ? (
-            <>
+        ) : (
+
+          <div className="flex gap-2">
+
+            {asset.status === "AVAILABLE" && (
               <button
-                onClick={() => setEditing(true)}
-                className="px-5 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition"
+                type="button"
+                onClick={onRent}
+                className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
               >
-                Modifica
+                Noleggia
               </button>
+            )}
 
+
+            {asset.status === "RENTED" && (
               <button
-                onClick={onClose}
-                className="px-5 py-3 rounded-xl bg-white/5 border border-white/10"
+                type="button"
+                onClick={onReturn}
+                className="flex-1 py-3 rounded-xl bg-white text-black font-medium"
               >
-                Chiudi
+                Registra restituzione
               </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={cancelEdit}
-                disabled={saving}
-                className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 disabled:opacity-50"
-              >
-                Annulla
-              </button>
-
-              <button
-                onClick={saveChanges}
-                disabled={saving || !form.name.trim()}
-                className="px-5 py-3 rounded-xl bg-white text-black font-medium disabled:opacity-50"
-              >
-                {saving ? "Salvataggio..." : "Salva"}
-              </button>
-            </>
-          )}
-
-        </div>
+            )}
 
 
-        {/* DELETE */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition"
+            >
+              Chiudi
+            </button>
 
-        {asset.status !== "RENTED" && (
-          <button
-            onClick={onDelete}
-            className="w-full py-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition flex items-center justify-center gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Elimina asset
-          </button>
+          </div>
+
         )}
+
+
+        {/* =================================================
+            DELETE
+        ================================================= */}
+
+        {!editing &&
+          asset.status !== "RENTED" && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="w-full py-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Elimina asset
+            </button>
+          )}
 
       </div>
     </Modal>
@@ -795,6 +977,9 @@ export default function Warehouse() {
         );
         return;
       }
+
+      console.log("ASSET TROVATO:", asset);
+      console.log("APRO DETTAGLIO:", asset.assetCode);
 
       setDetailAsset(asset);
 
@@ -1851,10 +2036,8 @@ export default function Warehouse() {
                     return (
                       <tr
                         key={asset.id}
-                        onClick={() =>
-                          setDetailAsset(asset)
-                        }
-                        className="border-b border-white/5 last:border-0 hover:bg-white/[0.04] transition cursor-pointer"
+                        onClick={() => setDetailAsset(asset)}
+                        className="cursor-pointer hover:bg-white/[0.03] transition"
                       >
 
                         <td className="px-5 py-4">
@@ -1933,6 +2116,7 @@ export default function Warehouse() {
                         <td className="px-5 py-4 text-right">
 
                           <button
+                            type="button"
                             onClick={(event) => {
                               event.stopPropagation();
                               setDetailAsset(asset);
