@@ -3126,6 +3126,23 @@ export default function Warehouse() {
         <AssetDetailModal
           asset={detailAsset}
           onClose={() => setDetailAsset(null)}
+          onRent={() => {
+            setDetailAsset(null);
+            setRentalStep("details");
+          }}
+          onReturn={() => handleReturn(detailAsset)}
+          onDelete={() => handleDelete(detailAsset)}
+          onSaved={(updatedAsset) => {
+            setDetailAsset(updatedAsset);
+
+            setAssets((current) =>
+              current.map((item) =>
+                item.id === updatedAsset.id
+                  ? updatedAsset
+                  : item
+              )
+            );
+          }}
         />
       )}
 
