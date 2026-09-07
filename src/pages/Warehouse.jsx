@@ -3122,6 +3122,13 @@ export default function Warehouse() {
         </Modal>
       )}
 
+      {detailAsset && (
+        <AssetDetailModal
+          asset={detailAsset}
+          onClose={() => setDetailAsset(null)}
+        />
+      )}
+
     </div>
   );
 }
