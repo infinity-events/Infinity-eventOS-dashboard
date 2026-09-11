@@ -1,0 +1,42 @@
+.warehouse-page {
+  background: radial-gradient(circle at 92% 0%, rgba(99, 102, 241, 0.1), transparent 28rem), #09090b;
+}
+
+.warehouse-page > div:first-child {
+  padding: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.35rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.16);
+}
+
+.warehouse-page > div:first-child h1 { letter-spacing: -0.04em; }
+
+.warehouse-page button,
+.warehouse-page input,
+.warehouse-page select {
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.warehouse-page button:hover { transform: translateY(-1px); }
+
+.warehouse-page button:focus-visible,
+.warehouse-page input:focus-visible,
+.warehouse-page select:focus-visible {
+  outline: 2px solid rgba(129, 140, 248, 0.8);
+  outline-offset: 2px;
+}
+
+.warehouse-page section.rounded-2xl {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: linear-gradient(145deg, rgba(23, 24, 29, 0.96), rgba(17, 18, 23, 0.96));
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.14);
+}
+
+.warehouse-page table tbody tr { transition: background 160ms ease; }
+.warehouse-page table tbody tr:hover { background: rgba(255, 255, 255, 0.035); }
+
+@media (max-width: 640px) {
+  .warehouse-page { padding: 1rem; }
+  .warehouse-page > div:first-child { padding: 1rem; }
+}

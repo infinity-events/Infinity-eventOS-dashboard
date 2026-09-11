@@ -40,6 +40,8 @@ import {
   updateInventoryAsset
 } from "../api/inventory";
 
+import "./Warehouse.css";
+
 
 /* =========================================================
    HELPERS
@@ -1762,7 +1764,7 @@ export default function Warehouse() {
   ======================================================= */
 
   return (
-    <div className="min-h-screen bg-[#09090B] text-white p-5 sm:p-6 lg:p-8">
+    <div className="warehouse-page min-h-screen bg-[#09090B] text-white p-5 sm:p-6 lg:p-8">
 
       {/* HEADER */}
 

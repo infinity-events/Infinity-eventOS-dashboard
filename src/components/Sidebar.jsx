@@ -12,8 +12,8 @@ import { UsersIcon } from "./icons/users";
 import { WalletIcon } from "./icons/wallet";
 import { ChartColumnIncreasingIcon } from "./icons/chart-column-increasing";
 import { SettingsIcon } from "./icons/settings";
-import { ShoppingCartIcon } from './icons/shopping-cart';
-import { PackageIcon } from "./icons/package";
+import { CreditCardIcon } from './icons/credit-card';
+import { BoxesIcon } from "./icons/boxes";
 
 
 const items = [
@@ -62,7 +62,7 @@ const items = [
   {
     name: "POS",
     path: "/pos",
-    icon: ShoppingCartIcon,
+    icon: CreditCardIcon,
     roles: [
       "ADMIN",
       "AZIENDA",
@@ -85,7 +85,7 @@ const items = [
   {
     name: "Magazzino",
     path: "/magazzino",
-    icon: PackageIcon,
+    icon: BoxesIcon,
     roles: ["ADMIN"],
   },
 ];
@@ -107,7 +107,7 @@ function SidebarNavItem({ item, onClose }) {
         p-3
         rounded-xl
         transition
-        ${isActive ? "bg-white/10" : "hover:bg-white/5"}
+        ${isActive ? "bg-gradient-to-r from-white/12 to-white/5 text-white shadow-[0_8px_24px_rgba(0,0,0,0.16)]" : "text-white/65 hover:bg-white/5 hover:text-white"}
       `}
       onClick={onClose}
       onMouseEnter={startIconAnimation}

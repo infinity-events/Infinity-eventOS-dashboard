@@ -1124,3 +1124,73 @@
     border-radius: 15px;
   }
 }
+
+/* Final visual overrides keep the POS aligned with the dashboard shell. */
+.pos-page {
+  background: radial-gradient(circle at 82% 0%, rgba(99, 102, 241, 0.1), transparent 28rem), #09090b;
+  color: #f8fafc;
+}
+
+.pos-header h1 {
+  background: linear-gradient(135deg, #fff, #a5b4fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: -0.04em;
+}
+
+.pos-header p { color: rgba(255, 255, 255, 0.48); }
+
+.add-product-button,
+.pos-categories button {
+  background: rgba(255, 255, 255, 0.055);
+  color: #f8fafc;
+}
+
+.add-product-button:hover,
+.pos-categories button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(165, 180, 252, 0.45);
+}
+
+.pos-categories button.active,
+.product-manager-header .add-product-button,
+.pay-button {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border-color: rgba(165, 180, 252, 0.7);
+}
+
+.product-card,
+.product-manager,
+.pos-cart,
+.product-modal {
+  background: linear-gradient(145deg, rgba(23, 24, 29, 0.97), rgba(17, 18, 23, 0.97));
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.product-card:hover {
+  border-color: rgba(129, 140, 248, 0.48);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(129, 140, 248, 0.08);
+}
+
+.product-image,
+.manager-product-image,
+.quantity button,
+.cart-header,
+.product-form input,
+.product-form textarea {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.product-image { color: rgba(255, 255, 255, 0.42); }
+
+.product-card,
+.product-manager,
+.pos-cart { box-shadow: 0 16px 42px rgba(0, 0, 0, 0.14); }
+
+.pos-page button:focus-visible,
+.pos-page input:focus-visible,
+.pos-page textarea:focus-visible {
+  outline: 2px solid rgba(129, 140, 248, 0.8);
+  outline-offset: 2px;
+}
