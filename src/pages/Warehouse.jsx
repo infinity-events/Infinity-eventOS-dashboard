@@ -90,40 +90,59 @@ function playScanBeep(type = "success") {
     if (!AudioContext) return;
 
     const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-
     const success = type === "success";
+    const now = context.currentTime;
+    const master = context.createGain();
+    const compressor = context.createDynamicsCompressor();
 
-    oscillator.type = "sine";
-    oscillator.frequency.value = success ? 880 : 420;
+    master.gain.value = 0.42;
+    compressor.threshold.value = -18;
+    compressor.knee.value = 12;
+    compressor.ratio.value = 4;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.18;
 
-    gain.gain.setValueAtTime(
-      0.0001,
-      context.currentTime
-    );
+    master.connect(compressor);
+    compressor.connect(context.destination);
 
-    gain.gain.exponentialRampToValueAtTime(
-      0.18,
-      context.currentTime + 0.01
-    );
+    const notes = success
+      ? [
+          { frequency: 660, start: 0, duration: 0.24, volume: 0.24 },
+          { frequency: 990, start: 0.08, duration: 0.3, volume: 0.2 },
+        ]
+      : [
+          { frequency: 330, start: 0, duration: 0.16, volume: 0.24 },
+          { frequency: 220, start: 0.1, duration: 0.22, volume: 0.2 },
+        ];
 
-    gain.gain.exponentialRampToValueAtTime(
-      0.0001,
-      context.currentTime + 0.13
-    );
+    notes.forEach(({ frequency, start, duration, volume }, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
 
-    oscillator.connect(gain);
-    gain.connect(context.destination);
+      oscillator.type = success && index === 1 ? "triangle" : "sine";
+      oscillator.frequency.setValueAtTime(frequency, now + start);
 
-    oscillator.start();
-    oscillator.stop(
-      context.currentTime + 0.13
-    );
+      gain.gain.setValueAtTime(0.0001, now + start);
+      gain.gain.exponentialRampToValueAtTime(
+        volume,
+        now + start + 0.018
+      );
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + start + duration
+      );
 
-    oscillator.onended = () => {
+      oscillator.connect(gain);
+      gain.connect(master);
+      oscillator.start(now + start);
+      oscillator.stop(now + start + duration + 0.02);
+    });
+
+    context.resume().catch(() => {});
+
+    window.setTimeout(() => {
       context.close().catch(() => {});
-    };
+    }, success ? 520 : 420);
   } catch (error) {
     console.warn(
       "Impossibile riprodurre il bip:",
