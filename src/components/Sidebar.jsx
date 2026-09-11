@@ -107,7 +107,7 @@ function SidebarNavItem({ item, onClose }) {
         p-3
         rounded-xl
         transition
-        ${isActive ? "bg-gradient-to-r from-white/12 to-white/5 text-white shadow-[0_8px_24px_rgba(0,0,0,0.16)]" : "text-white/65 hover:bg-white/5 hover:text-white"}
+        ${isActive ? "bg-white/10 text-white" : "text-white/65 hover:bg-white/5 hover:text-white"}
       `}
       onClick={onClose}
       onMouseEnter={startIconAnimation}
