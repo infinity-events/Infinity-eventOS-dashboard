@@ -88,7 +88,7 @@ export default function Analytics() {
     } catch (error) {
       console.error(error);
 
-      alert("Errore salvataggio email");
+      alert(error?.message || "Errore salvataggio email");
     } finally {
       setEmailLoading(false);
     }
@@ -104,7 +104,7 @@ export default function Analytics() {
     } catch (error) {
       console.error(error);
 
-      alert("Errore generazione report");
+      alert(error?.message || "Errore generazione report");
     } finally {
       setReportLoading(false);
     }
@@ -120,7 +120,7 @@ export default function Analytics() {
     } catch (error) {
       console.error(error);
 
-      alert("Errore invio email");
+      alert(error?.message || "Errore invio email");
     } finally {
       setReportLoading(false);
     }

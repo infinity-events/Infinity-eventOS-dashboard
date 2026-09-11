@@ -1,5 +1,20 @@
 const API_URL="https://infinity-eventos-api.onrender.com";
 
+async function readError(response, fallback) {
+  try {
+    const payload = await response.json();
+    if (payload?.message) {
+      return Array.isArray(payload.message)
+        ? payload.message.join(", ")
+        : payload.message;
+    }
+  } catch {
+    // Keep the stable fallback for empty/non-JSON responses.
+  }
+
+  return fallback;
+}
+
 
 export async function getReportEmail(festivalId){
 
@@ -8,7 +23,7 @@ const response=await fetch(
 );
 
 if(!response.ok)
-throw new Error("Errore caricamento email");
+throw new Error(await readError(response, "Errore caricamento email"));
 
 return response.json();
 
@@ -31,7 +46,7 @@ email
 );
 
 if(!response.ok)
-throw new Error("Errore salvataggio email");
+throw new Error(await readError(response, "Errore salvataggio email"));
 
 return response.json();
 
@@ -48,7 +63,7 @@ method:"POST"
 );
 
 if(!response.ok)
-throw new Error("Errore generazione report");
+throw new Error(await readError(response, "Errore generazione report"));
 
 return response.json();
 
@@ -65,7 +80,7 @@ method:"POST"
 );
 
 if(!response.ok)
-throw new Error("Errore invio email");
+throw new Error(await readError(response, "Errore invio email"));
 
 return response.json();
 
