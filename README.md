@@ -1,9 +1,7 @@
 # React + Vite
 
-<!--START_SECTION:badges-->
-- name: Update Badges
-  uses: pemtajo/badge-readme@main
-<!--END_SECTION:badges-->
+https://img.shields.io/website?url=https%3A%2F%2Finfinityeventos-landing.vercel.app&up_message=online&down_message=offline&color=purple
+
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
