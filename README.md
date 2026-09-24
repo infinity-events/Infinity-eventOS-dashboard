@@ -1,6 +1,6 @@
 # React + Vite
 
-https://img.shields.io/website?url=https%3A%2F%2Finfinityeventos-landing.vercel.app&up_message=online&down_message=offline&color=purple
+<img alt=“Siteweb” scr="https://img.shields.io/website?url=https%3A%2F%2Finfinityeventos-landing.vercel.app&up_message=online&down_message=offline&color=purple">
 
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
