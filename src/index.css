@@ -15,18 +15,9 @@ background:#09090B;
 }
 
 .initial-loader__mark {
-  position: relative;
   display: block;
   width: min(46vw, 184px);
-  aspect-ratio: 826 / 512;
-}
-
-.initial-loader__logo,
-.initial-loader__progress {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  height: auto;
 }
 
 .initial-loader__logo {
@@ -34,22 +25,20 @@ background:#09090B;
   opacity: 0.22;
 }
 
-.initial-loader__progress {
-  background: conic-gradient(from 0deg, transparent 0deg 300deg, #fff 334deg 360deg);
-  -webkit-mask: url('/favicon.svg') center / contain no-repeat;
-  mask: url('/favicon.svg') center / contain no-repeat;
-  animation: initial-loader-orbit 1.35s linear infinite;
+.initial-loader__trace {
+  animation: initial-loader-trace 2.2s linear infinite;
 }
 
-@keyframes initial-loader-orbit {
+@keyframes initial-loader-trace {
   to {
-    transform: rotate(360deg);
+    stroke-dashoffset: -1000;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .initial-loader__progress {
-    animation-duration: 8s;
+  .initial-loader__trace {
+    animation: none;
+    stroke-dasharray: none;
   }
 }
 

@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import Warehouse from "./pages/Warehouse";
 import Landing from "./pages/Landing";
 import CreateFestivalModal from "./components/CreateFestivalModal";
+import InfinityLoader from "./components/InfinityLoader";
 import { useAuth } from "./contexts/AuthContext";
 import { useFestival } from "./contexts/FestivalContext";
 import { createFestival } from "./api/festivals";
@@ -211,7 +212,7 @@ function AuthenticatedApp(){
 
 export default function App(){
 const {user,loading}=useAuth();
-if(loading)return <div className="initial-loader" role="status" aria-label="Caricamento"><span className="initial-loader__mark"><img className="initial-loader__logo" src="/favicon.svg" alt=""/><span className="initial-loader__progress" aria-hidden="true"/></span></div>;
+if(loading)return <InfinityLoader/>;
 if(!user)return <Landing/>;
 
 return(
