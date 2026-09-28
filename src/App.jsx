@@ -211,7 +211,7 @@ function AuthenticatedApp(){
 
 export default function App(){
 const {user,loading}=useAuth();
-if(loading)return <div className="min-h-screen bg-[#09090B] text-white flex items-center justify-center">Caricamento...</div>;
+if(loading)return <div className="initial-loader" role="status" aria-label="Caricamento"><span className="initial-loader__mark"><img className="initial-loader__logo" src="/favicon.svg" alt=""/><span className="initial-loader__progress" aria-hidden="true"/></span></div>;
 if(!user)return <Landing/>;
 
 return(

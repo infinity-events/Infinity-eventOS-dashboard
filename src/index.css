@@ -7,6 +7,52 @@ font-family:Inter,system-ui,sans-serif;
 background:#09090B;
 }
 
+.initial-loader {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #09090B;
+}
+
+.initial-loader__mark {
+  position: relative;
+  display: block;
+  width: min(46vw, 184px);
+  aspect-ratio: 826 / 512;
+}
+
+.initial-loader__logo,
+.initial-loader__progress {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.initial-loader__logo {
+  filter: brightness(0) invert(1);
+  opacity: 0.22;
+}
+
+.initial-loader__progress {
+  background: conic-gradient(from 0deg, transparent 0deg 300deg, #fff 334deg 360deg);
+  -webkit-mask: url('/favicon.svg') center / contain no-repeat;
+  mask: url('/favicon.svg') center / contain no-repeat;
+  animation: initial-loader-orbit 1.35s linear infinite;
+}
+
+@keyframes initial-loader-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .initial-loader__progress {
+    animation-duration: 8s;
+  }
+}
+
 .input{
 
 width:100%;
