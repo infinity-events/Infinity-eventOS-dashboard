@@ -3659,7 +3659,7 @@ function printAssetLabel(asset) {
           </div>
 
           <div class="brand">
-            INFINITY EVENTOS
+            INFINITY SERVICE
           </div>
 
         </div>
