@@ -15,6 +15,7 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Warehouse from "./pages/Warehouse";
 import Landing from "./pages/Landing";
+import LegalCenter from "./components/LegalCenter";
 import CreateFestivalModal from "./components/CreateFestivalModal";
 import InfinityLoader from "./components/InfinityLoader";
 import { useAuth } from "./contexts/AuthContext";
@@ -181,6 +182,8 @@ return(
     </RoleRoute>
   }
 />
+
+<Route path="/legal" element={<LegalCenter/>}/>
 
 <Route 
   path="/access-denied"
