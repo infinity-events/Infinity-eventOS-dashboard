@@ -14,7 +14,6 @@ import { ChartColumnIncreasingIcon } from "./icons/chart-column-increasing";
 import { SettingsIcon } from "./icons/settings";
 import { CreditCardIcon } from './icons/credit-card';
 import { BoxesIcon } from "./icons/boxes";
-import { FileText } from "lucide-react";
 
 
 const items = [
@@ -88,11 +87,6 @@ const items = [
     path: "/magazzino",
     icon: BoxesIcon,
     roles: ["ADMIN"],
-  },
-  {
-    name: "Legal Center",
-    path: "/legal",
-    icon: FileText,
   },
 ];
 
