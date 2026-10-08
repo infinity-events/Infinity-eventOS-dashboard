@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LogIn, ShieldCheck, Sparkles } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import LegalCenter from "../components/LegalCenter";
 
 export default function Landing(){
   const {loginWithGoogle}=useAuth();
@@ -28,6 +29,8 @@ export default function Landing(){
         <p className="text-gray-400 mt-2">Accedi per gestire i tuoi festival.</p>
         <button onClick={login} disabled={loading} className="mt-8 w-full rounded-2xl bg-white text-gray-900 py-3.5 px-4 font-semibold flex items-center justify-center gap-3 hover:bg-gray-100 transition disabled:opacity-60"><LogIn size={20}/>{loading?"Accesso in corso...":"Accedi con Google"}</button>
         <div className="flex items-center gap-2 justify-center text-xs text-gray-500 mt-6"><ShieldCheck size={15}/> Accesso sicuro tramite Firebase Authentication</div>
+        <p className="text-[11px] leading-5 text-zinc-600 text-center mt-5">Utilizzando la dashboard dichiari di aver preso visione delle informazioni legali applicabili.</p>
+        <div className="mt-4 flex justify-center"><LegalCenter compact/></div>
         {error&&<p className="mt-5 text-sm text-red-300 bg-red-500/10 rounded-xl p-3">{error}</p>}
       </section>
     </div>
