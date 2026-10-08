@@ -18,6 +18,7 @@ import {
 import { useFestival } from "../contexts/FestivalContext";
 import { updateFestival } from "../api/festivals";
 import { getStripeStatus, startStripeConnect } from "../api/stripe";
+import LegalCenter from "../components/LegalCenter";
 
 const statusOptions = [
   { value: "BOZZA", label: "Bozza", description: "L’evento è in preparazione e non è ancora operativo.", color: "text-amber-300", background: "bg-amber-400/10 border-amber-400/20" },
@@ -184,6 +185,20 @@ export default function Settings() {
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div className="flex items-start gap-3"><CreditCard size={21} className="mt-0.5 text-purple-300" /><div><h2 className="text-xl font-bold">Pagamenti Stripe</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-gray-400">Collega l’account Stripe dell’azienda per ricevere i pagamenti dei biglietti tramite Checkout.</p>{stripeStatus?.connected ? <p className="mt-3 text-sm font-semibold text-emerald-300">Account collegato e pronto a ricevere pagamenti.</p> : stripeStatus && <p className="mt-3 text-sm text-amber-300">Onboarding da completare.</p>}</div></div>
           <button type="button" onClick={connectStripe} disabled={stripeLoading} className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3 font-semibold transition hover:bg-purple-500 disabled:opacity-60">{stripeLoading && <LoaderCircle size={17} className="animate-spin" />}{stripeStatus?.connected ? "Gestisci Stripe" : "Collega Stripe"}</button>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-white/5 bg-[#17181D] p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Documentazione</p>
+            <h2 className="mt-1 text-base font-semibold text-gray-200">Documenti legali</h2>
+            <p className="mt-1 text-xs leading-5 text-gray-500">Privacy, cookie, condizioni, biglietti, accesso, media e comunicazioni.</p>
+          </div>
+          <Link to="/legal" className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-gray-400 transition hover:border-purple-400/30 hover:text-white">Apri tutto</Link>
+        </div>
+        <div className="mt-4 border-t border-white/5 pt-4">
+          <LegalCenter compact />
         </div>
       </section>
 
