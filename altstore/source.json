@@ -1,0 +1,36 @@
+{
+  "name": "Infinity EventOS",
+  "subtitle": "App ufficiale Infinity EventOS",
+  "description": "Source ufficiale per Infinity EventOS.",
+  "website": "https://github.com/infinity-events/Infinity-eventOS-dashboard",
+  "apps": [
+    {
+      "name": "Infinity EventOS",
+      "bundleIdentifier": "com.infinityevents.eventos",
+      "developerName": "Infinity Events",
+      "subtitle": "Gestione eventi e operazioni",
+      "localizedDescription": "Dashboard mobile di Infinity EventOS.",
+      "iconURL": "https://infinityeventos.dpdns.org/favicon.svg",
+      "category": "utilities",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "buildVersion": "1",
+          "date": "2026-10-19T17:29:36.139Z",
+          "localizedDescription": "Build iOS per AltStore Classic.",
+          "downloadURL": "https://github.com/infinity-events/Infinity-eventOS-dashboard/releases/download/ios-v1.0.0-1/InfinityEventOS.ipa",
+          "size": 1049048,
+          "sha256": "13161ed224297b9c3731f578c547e8560d36a647e840ff45f3cb62e43740dd7a",
+          "minOSVersion": "16.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSCameraUsageDescription": "Infinity EventOS usa la fotocamera per scansionare i QR code."
+        }
+      }
+    }
+  ],
+  "news": []
+}
