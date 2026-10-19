@@ -43,10 +43,11 @@ jobs:
         run: npx cap add ios
       - name: Sync web assets into iOS project
         run: npx cap sync ios
-      - name: Set app version and build
+      - name: Set app version and permissions
         run: |
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ inputs.version }}" ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ inputs.build }}" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string Infinity EventOS usa la fotocamera per scansionare i QR code." ios/App/App/Info.plist
       - name: Build unsigned iOS app
         run: |
           xcodebuild \
