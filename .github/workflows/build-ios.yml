@@ -1,4 +1,4 @@
-name: Build iOS IPA for AltStore Classic
+name: Build iOS IPA and publish AltStore Classic source
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
         default: "1"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-ios:
@@ -65,6 +65,68 @@ jobs:
           mkdir Payload
           cp -R build/Build/Products/Release-iphoneos/App.app Payload/InfinityEventOS.app
           ditto -c -k --sequesterRsrc --keepParent Payload InfinityEventOS.ipa
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="ios-v${{ inputs.version }}-${{ inputs.build }}"
+          gh release create "$TAG" InfinityEventOS.ipa \
+            --title "Infinity EventOS iOS ${{ inputs.version }} (${{ inputs.build }})" \
+            --notes "Build iOS per AltStore Classic."
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+      - name: Generate AltStore Classic source
+        env:
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          APP_VERSION: ${{ inputs.version }}
+          APP_BUILD: ${{ inputs.build }}
+        run: |
+          mkdir -p altstore
+          IPA_SIZE=$(stat -f%z InfinityEventOS.ipa)
+          IPA_SHA256=$(shasum -a 256 InfinityEventOS.ipa | awk '{print $1}')
+          export IPA_SIZE IPA_SHA256
+          node <<'NODE'
+          const fs = require("fs");
+          const source = {
+            name: "Infinity EventOS",
+            subtitle: "App ufficiale Infinity EventOS",
+            description: "Source ufficiale per Infinity EventOS.",
+            website: "https://github.com/infinity-events/Infinity-eventOS-dashboard",
+            apps: [{
+              name: "Infinity EventOS",
+              bundleIdentifier: "com.infinityevents.eventos",
+              developerName: "Infinity Events",
+              subtitle: "Gestione eventi e operazioni",
+              localizedDescription: "Dashboard mobile di Infinity EventOS.",
+              iconURL: "https://infinityeventos.dpdns.org/favicon.svg",
+              category: "utilities",
+              versions: [{
+                version: process.env.APP_VERSION,
+                buildVersion: process.env.APP_BUILD,
+                date: new Date().toISOString(),
+                localizedDescription: "Build iOS per AltStore Classic.",
+                downloadURL: "https://github.com/infinity-events/Infinity-eventOS-dashboard/releases/download/" + process.env.RELEASE_TAG + "/InfinityEventOS.ipa",
+                size: Number(process.env.IPA_SIZE),
+                sha256: process.env.IPA_SHA256,
+                minOSVersion: "16.0"
+              }],
+              appPermissions: {
+                entitlements: [],
+                privacy: {
+                  NSCameraUsageDescription: "Infinity EventOS usa la fotocamera per scansionare i QR code."
+                }
+              }
+            }],
+            news: []
+          };
+          fs.writeFileSync("altstore/source.json", JSON.stringify(source, null, 2) + "\n");
+          NODE
+      - name: Commit updated AltStore source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add altstore/source.json
+          git commit -m "Publish AltStore Classic source for ${{ inputs.version }} (${{ inputs.build }})"
+          git push origin HEAD:main
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v5
         with:
