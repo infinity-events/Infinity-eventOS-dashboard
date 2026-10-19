@@ -1,0 +1,6 @@
+{
+  "appId": "com.infinityevents.eventos",
+  "appName": "Infinity EventOS",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
