@@ -23,7 +23,23 @@ import { useFestival } from "./contexts/FestivalContext";
 import { createFestival } from "./api/festivals";
 
 function RoleRoute({ children, allowedRoles }) {
-  const { role } = useAuth();
+  const { role, profileError, logout } = useAuth();
+
+  if (profileError) {
+    return (
+      <div className="min-h-screen bg-[#09090B] text-white flex items-center justify-center p-6">
+        <div className="max-w-md text-center">
+          <p className="text-red-300">{profileError}</p>
+          <button
+            onClick={() => logout()}
+            className="mt-5 rounded-xl bg-white/10 px-5 py-3 hover:bg-white/20"
+          >
+            Torna alla schermata di accesso
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!role) {
     return (
