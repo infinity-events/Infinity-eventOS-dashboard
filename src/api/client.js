@@ -15,7 +15,15 @@ export async function apiRequest(endpoint, options = {}) {
 
   let token = null;
   if (auth.currentUser) {
-    token = await auth.currentUser.getIdToken();
+    token = await Promise.race([
+      auth.currentUser.getIdToken(),
+      new Promise((_, reject) => {
+        window.setTimeout(
+          () => reject(new Error("Firebase token timeout")),
+          API_TIMEOUT_MS,
+        );
+      }),
+    ]);
   }
 
   const controller = new AbortController();
