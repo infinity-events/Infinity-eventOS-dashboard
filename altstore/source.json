@@ -15,12 +15,12 @@
       "versions": [
         {
           "version": "1.0.0",
-          "buildVersion": "2",
-          "date": "2026-10-23T19:40:52.425Z",
+          "buildVersion": "3",
+          "date": "2026-10-23T19:47:35.512Z",
           "localizedDescription": "Build iOS per AltStore Classic.",
-          "downloadURL": "https://github.com/infinity-events/Infinity-eventOS-dashboard/releases/download/ios-v1.0.0-2/InfinityEventOS.ipa",
-          "size": 1049193,
-          "sha256": "2ecb32fedfb0f1f263ded767c0d5c6c9c9da4566b5e1e04c141198658a72af4f",
+          "downloadURL": "https://github.com/infinity-events/Infinity-eventOS-dashboard/releases/download/ios-v1.0.0-3/InfinityEventOS.ipa",
+          "size": 1049305,
+          "sha256": "3c569f3738723e46ca0ed2ff1b09e0231183071da43a4d06bf9fd57a1fb7e3e2",
           "minOSVersion": "16.0"
         }
       ],
