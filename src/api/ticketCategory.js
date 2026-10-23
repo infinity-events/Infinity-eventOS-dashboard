@@ -1,68 +1,18 @@
-const API_URL="https://infinity-eventos-api.onrender.com";
+import { apiRequest } from "./client";
 
-
-export async function getTicketCategories(festivalId){
-
-const res=await fetch(
-`${API_URL}/ticket-category/${festivalId}`
-);
-
-if(!res.ok){
-throw new Error("Errore caricamento categorie");
+export function getTicketCategories(festivalId){
+  return apiRequest(`/ticket-category/${festivalId}`);
 }
 
-return res.json();
-
+export function createTicketCategory(data){
+  return apiRequest("/ticket-category",{
+    method:"POST",
+    body:JSON.stringify(data)
+  });
 }
 
-
-
-export async function createTicketCategory(data){
-
-const res=await fetch(
-`${API_URL}/ticket-category`,
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify(data)
-}
-);
-
-
-if(!res.ok){
-
-const error=await res.text();
-
-throw new Error(error);
-
-}
-
-
-return res.json();
-
-}
-
-
-
-export async function deleteTicketCategory(id){
-
-const res=await fetch(
-`${API_URL}/ticket-category/${id}`,
-{
-method:"DELETE"
-}
-);
-
-
-if(!res.ok){
-
-throw new Error("Errore eliminazione categoria");
-
-}
-
-
-return true;
-
+export function deleteTicketCategory(id){
+  return apiRequest(`/ticket-category/${id}`,{
+    method:"DELETE"
+  }).then(()=>true);
 }
