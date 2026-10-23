@@ -42,9 +42,22 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
+    let settled = false;
+
+    const startupTimeout = window.setTimeout(() => {
+      if (settled) return;
+      console.error("Timeout inizializzazione autenticazione");
+      setLoading(false);
+      setProfileError(
+        "L'autenticazione non risponde. Chiudi e riapri l'app, poi riprova.",
+      );
+    }, 10000);
+
     const unsubscribe = onAuthStateChanged(
       auth,
       async (currentUser) => {
+        settled = true;
+        window.clearTimeout(startupTimeout);
         setUser(currentUser);
         setProfileError(null);
 
@@ -75,6 +88,8 @@ export function AuthProvider({ children }) {
         }
       },
       (error) => {
+        settled = true;
+        window.clearTimeout(startupTimeout);
         console.error("Errore inizializzazione autenticazione:", error);
         setUser(null);
         setProfile(null);
@@ -85,7 +100,11 @@ export function AuthProvider({ children }) {
       },
     );
 
-    return unsubscribe;
+    return () => {
+      settled = true;
+      window.clearTimeout(startupTimeout);
+      unsubscribe();
+    };
   }, []);
 
   return (
