@@ -215,16 +215,33 @@ return(
 }
 
 function AuthenticatedApp(){
-  const {loading}=useFestival();
+  const {loading,error}=useFestival();
   const {festivals,addFestival}=useFestival();
+
   if(loading)return <div className="min-h-screen bg-[#09090B] text-white flex items-center justify-center">Caricamento dei tuoi festival...</div>;
+
+  if(error)return (
+    <div className="min-h-screen bg-[#09090B] text-white flex items-center justify-center p-6">
+      <div className="max-w-md text-center">
+        <p className="text-red-300">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-5 rounded-xl bg-white/10 px-5 py-3 hover:bg-white/20"
+        >
+          Riprova
+        </button>
+      </div>
+    </div>
+  );
+
   async function handleCreate(data){
     const created=await createFestival(data);
     addFestival(created);
   }
+
   return <>
     <Layout/>
-    {festivals.length===0&&<CreateFestivalModal required create={handleCreate}/>} 
+    {festivals.length===0&&<CreateFestivalModal required create={handleCreate}/>}
   </>;
 }
 
