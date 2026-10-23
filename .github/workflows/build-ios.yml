@@ -26,7 +26,7 @@ jobs:
       VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
       VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
       VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-      VITE_API_URL: ${{ secrets.VITE_API_URL }}
+      VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://infinity-eventos-api.onrender.com' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -39,10 +39,14 @@ jobs:
         run: npm install
       - name: Build web application
         run: npm run build
+      - name: Verify web build output
+        run: test -s dist/index.html
       - name: Add Capacitor iOS platform
         run: npx cap add ios
       - name: Sync web assets into iOS project
         run: npx cap sync ios
+      - name: Verify Capacitor web assets
+        run: test -s ios/App/App/public/index.html
       - name: Set app version and permissions
         run: |
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ inputs.version }}" ios/App/App/Info.plist
