@@ -55,6 +55,7 @@ export async function apiRequest(endpoint, options = {}) {
     if (error?.name === "AbortError") {
       throw new Error(
         "La richiesta ha superato il tempo limite. Riprova tra poco.",
+        { cause: error },
       );
     }
     throw error;
