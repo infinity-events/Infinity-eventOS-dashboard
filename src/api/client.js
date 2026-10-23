@@ -1,73 +1,64 @@
 import { auth } from "../firebase";
 
+const DEFAULT_API_URL = "https://infinity-eventos-api.onrender.com";
+const API_URL = (
+  import.meta.env.VITE_API_URL || DEFAULT_API_URL
+).trim().replace(/\/+$/, "");
+const API_TIMEOUT_MS = 15000;
 
-const API_URL =
-"https://infinity-eventos-api.onrender.com";
+export async function apiRequest(endpoint, options = {}) {
+  const {
+    headers: extraHeaders = {},
+    signal: externalSignal,
+    ...fetchOptions
+  } = options;
 
+  let token = null;
+  if (auth.currentUser) {
+    token = await auth.currentUser.getIdToken();
+  }
 
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(
+    () => controller.abort(),
+    API_TIMEOUT_MS,
+  );
 
-export async function apiRequest(
-endpoint,
-options={}
-){
+  const signal = externalSignal || controller.signal;
 
+  try {
+    const response = await fetch(
+      `${API_URL}${endpoint}`,
+      {
+        ...fetchOptions,
+        signal,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && {
+            Authorization: `Bearer ${token}`,
+          }),
+          ...extraHeaders,
+        },
+      },
+    );
 
-let token=null;
+    const data = await response.json().catch(() => null);
 
+    if (!response.ok) {
+      throw new Error(
+        data?.message || data?.error || `API Error: ${response.status}`,
+      );
+    }
 
-
-if(auth.currentUser){
-
-token = await auth.currentUser.getIdToken();
-
-}
-
-
-
-const response = await fetch(
-
-API_URL + endpoint,
-
-{
-
-headers:{
-
-"Content-Type":"application/json",
-
-...(token && {
-
-Authorization:
-`Bearer ${token}`
-
-}),
-
-...options.headers
-
-},
-
-...options
-
-}
-
-);
-
-
-
-if(!response.ok){
-let message="API Error: "+response.status;
-try{
-const data=await response.json();
-message=data?.message||data?.error||message;
-}catch{
-// Il backend potrebbe non restituire un corpo JSON.
-}
-throw new Error(message);
-
-}
-
-
-
-return response.json();
-
-
+    return data;
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(
+        "La richiesta ha superato il tempo limite. Riprova tra poco.",
+      );
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
