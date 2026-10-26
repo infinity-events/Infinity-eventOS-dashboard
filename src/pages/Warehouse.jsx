@@ -10,6 +10,7 @@ import {
   FileText,
   Package,
   Plus,
+  Printer,
   QrCode,
   RefreshCw,
   Search,
@@ -791,6 +792,7 @@ export default function Warehouse() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] =
     useState("ALL");
+  const [selectedAssetCodes, setSelectedAssetCodes] = useState([]);
 
 
   /* -------------------------------------------------------
@@ -1767,6 +1769,128 @@ export default function Warehouse() {
     });
 
 
+  const selectedAssets =
+    filteredAssets.filter((asset) =>
+      selectedAssetCodes.includes(asset.assetCode)
+    );
+
+  function toggleAssetSelection(assetCode) {
+    setSelectedAssetCodes((current) =>
+      current.includes(assetCode)
+        ? current.filter((code) => code !== assetCode)
+        : [...current, assetCode]
+    );
+  }
+
+  function toggleAllFilteredAssets() {
+    const visibleCodes = filteredAssets.map((asset) => asset.assetCode);
+    const allSelected = visibleCodes.length > 0 &&
+      visibleCodes.every((code) => selectedAssetCodes.includes(code));
+
+    setSelectedAssetCodes((current) =>
+      allSelected
+        ? current.filter((code) => !visibleCodes.includes(code))
+        : [...new Set([...current, ...visibleCodes])]
+    );
+  }
+
+  function printSelectedAssetLabels() {
+    if (!selectedAssets.length) {
+      alert("Seleziona almeno un asset da stampare.");
+      return;
+    }
+
+    const labels = selectedAssets.map((asset) => {
+      const qrSvg = document.querySelector(
+        `[data-bulk-qr="${CSS.escape(asset.assetCode)}"] svg`
+      );
+      if (!qrSvg) return null;
+
+      const svgData = new XMLSerializer().serializeToString(qrSvg);
+      const qrSrc = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`;
+      const escapeHtml = (value) => String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+      return `
+        <article class="label">
+          <img class="qr" src="${qrSrc}" alt="QR ${escapeHtml(asset.assetCode)}" />
+          <div class="name">${escapeHtml(asset.name || "Asset")}</div>
+          <div class="code">${escapeHtml(asset.assetCode)}</div>
+          ${asset.category ? `<div class="category">${escapeHtml(asset.category)}</div>` : ""}
+        </article>
+      `;
+    }).filter(Boolean);
+
+    if (!labels.length) {
+      alert("Non è stato possibile generare i QR code degli asset selezionati.");
+      return;
+    }
+
+    const sheets = [];
+    for (let i = 0; i < labels.length; i += 12) {
+      sheets.push(`<section class="sheet">${labels.slice(i, i + 12).join("")}</section>`);
+    }
+
+    const printWindow = window.open("", "_blank", "width=900,height=1000");
+    if (!printWindow) {
+      alert("Il browser ha bloccato la finestra di stampa. Consenti i popup per Infinity EventOS e riprova.");
+      return;
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html lang="it">
+      <head>
+        <meta charset="utf-8" />
+        <title>Etichette magazzino</title>
+        <style>
+          @page { size: A4 portrait; margin: 0; }
+          * { box-sizing: border-box; }
+          html, body { margin: 0; padding: 0; background: #fff; color: #111; font-family: Arial, sans-serif; }
+          .sheet {
+            width: 210mm; height: 297mm; padding: 7mm;
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(4, 1fr); gap: 3mm;
+            break-after: page; page-break-after: always;
+          }
+          .sheet:last-child { break-after: auto; page-break-after: auto; }
+          .label {
+            min-width: 0; min-height: 0; border: .25mm dashed #999;
+            padding: 3mm 2mm; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+            overflow: hidden; break-inside: avoid; page-break-inside: avoid;
+          }
+          .qr { width: 37mm; height: 37mm; object-fit: contain; image-rendering: pixelated; }
+          .name { margin-top: 2mm; max-width: 100%; font-size: 10pt; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
+          .code { margin-top: 1mm; font: 8pt monospace; overflow-wrap: anywhere; }
+          .category { margin-top: 1mm; font-size: 7pt; color: #555; overflow-wrap: anywhere; }
+          @media screen {
+            body { background: #e8e8e8; padding: 12px; }
+            .sheet { margin: 0 auto 12px; background: white; box-shadow: 0 2px 12px #0002; }
+          }
+        </style>
+      </head>
+      <body>
+        ${sheets.join("")}
+        <script>
+          window.addEventListener("load", () => {
+            const images = Array.from(document.images);
+            Promise.all(images.map((img) => img.decode().catch(() => {}))).then(() => {
+              setTimeout(() => window.print(), 250);
+            });
+          });
+          window.addEventListener("afterprint", () => window.close());
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
   /* =======================================================
      ACTIVE RENTALS
   ======================================================= */
@@ -1930,6 +2054,27 @@ export default function Warehouse() {
               <p className="text-sm text-white/40 mt-1">
                 Tutti gli asset operativi
               </p>
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={toggleAllFilteredAssets}
+                  disabled={!filteredAssets.length}
+                  className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-xs disabled:opacity-40"
+                >
+                  {filteredAssets.length > 0 && filteredAssets.every((asset) => selectedAssetCodes.includes(asset.assetCode))
+                    ? "Deseleziona risultati"
+                    : "Seleziona risultati"}
+                </button>
+                <button
+                  type="button"
+                  onClick={printSelectedAssetLabels}
+                  disabled={!selectedAssets.length}
+                  className="px-3 py-2 rounded-lg bg-white text-black font-medium hover:bg-white/90 text-xs disabled:opacity-40 flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" />
+                  Stampa etichette QR ({selectedAssets.length})
+                </button>
+              </div>
             </div>
 
 
@@ -2014,6 +2159,17 @@ export default function Warehouse() {
               <thead>
                 <tr className="text-left text-xs text-white/30 border-b border-white/5">
 
+                  <th className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label="Seleziona tutti gli asset visibili"
+                      checked={filteredAssets.length > 0 && filteredAssets.every((asset) => selectedAssetCodes.includes(asset.assetCode))}
+                      onChange={toggleAllFilteredAssets}
+                      onClick={(event) => event.stopPropagation()}
+                      className="h-4 w-4 accent-white cursor-pointer"
+                    />
+                  </th>
+
                   <th className="px-5 py-3 font-medium">
                     Asset
                   </th>
@@ -2058,8 +2214,18 @@ export default function Warehouse() {
                       <tr
                         key={asset.id}
                         onClick={() => setDetailAsset(asset)}
-                        className="cursor-pointer hover:bg-white/[0.03] transition"
+                        className={`cursor-pointer hover:bg-white/[0.03] transition ${selectedAssetCodes.includes(asset.assetCode) ? "bg-white/[0.04]" : ""}`}
                       >
+
+                        <td className="px-3 py-4" onClick={(event) => event.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            aria-label={`Seleziona ${asset.name}`}
+                            checked={selectedAssetCodes.includes(asset.assetCode)}
+                            onChange={() => toggleAssetSelection(asset.assetCode)}
+                            className="h-4 w-4 accent-white cursor-pointer"
+                          />
+                        </td>
 
                         <td className="px-5 py-4">
 
@@ -3141,6 +3307,19 @@ export default function Warehouse() {
           </div>
 
         </Modal>
+      )}
+
+      {selectedAssets.length > 0 && (
+        <div
+          aria-hidden="true"
+          style={{ position: "fixed", left: "-10000px", top: 0, width: 1, height: 1, overflow: "hidden", pointerEvents: "none" }}
+        >
+          {selectedAssets.map((asset) => (
+            <div key={asset.assetCode} data-bulk-qr={asset.assetCode}>
+              <QRCode value={String(asset.assetCode)} size={512} level="M" />
+            </div>
+          ))}
+        </div>
       )}
 
       {detailAsset && (
