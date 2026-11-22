@@ -18,6 +18,8 @@ import Landing from "./pages/Landing";
 import LegalCenter from "./components/LegalCenter";
 import CreateFestivalModal from "./components/CreateFestivalModal";
 import InfinityLoader from "./components/InfinityLoader";
+import TelegramWarehouse from "./pages/TelegramWarehouse";
+import "./pages/TelegramWarehouse.css";
 import { useAuth } from "./contexts/AuthContext";
 import { useFestival } from "./contexts/FestivalContext";
 import { createFestival } from "./api/festivals";
@@ -247,6 +249,7 @@ function AuthenticatedApp(){
 
 
 export default function App(){
+if (window.Telegram?.WebApp?.initData) return <TelegramWarehouse />;
 const {user,loading,profileError,logout}=useAuth();
 
 if(loading)return <InfinityLoader/>;
