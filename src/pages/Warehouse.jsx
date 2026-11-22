@@ -7,6 +7,7 @@ import {
   Check,
   ChevronRight,
   Clock3,
+  Copy,
   FileText,
   Package,
   Plus,
@@ -40,6 +41,7 @@ import {
   deleteInventoryAsset,
   updateInventoryAsset
 } from "../api/inventory";
+import { apiRequest } from "../api/client";
 
 import "./Warehouse.css";
 
@@ -788,6 +790,7 @@ export default function Warehouse() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [telegramLink, setTelegramLink] = useState(null);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] =
@@ -943,6 +946,15 @@ export default function Warehouse() {
 
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function createTelegramLink() {
+    try {
+      const link = await apiRequest("/telegram/link-token", { method: "POST" });
+      setTelegramLink(link);
+    } catch (linkError) {
+      setError(linkError.message || "Impossibile generare il codice Telegram.");
     }
   }
 
@@ -1934,6 +1946,14 @@ export default function Warehouse() {
             Scansiona asset
           </button>
 
+          <button
+            onClick={createTelegramLink}
+            className="px-4 py-2.5 rounded-xl bg-[#229ED9]/15 border border-[#229ED9]/30 text-[#8bd5f7] hover:bg-[#229ED9]/25 transition flex items-center gap-2"
+          >
+            <span aria-hidden="true">✈</span>
+            Collega Telegram
+          </button>
+
 
           <button
             onClick={openNewRental}
@@ -1998,6 +2018,37 @@ export default function Warehouse() {
             <X className="w-4 h-4" />
           </button>
         </div>
+      )}
+
+      {telegramLink && (
+        <Modal
+          title="Collega Infinity Warehouse a Telegram"
+          onClose={() => setTelegramLink(null)}
+        >
+          <div className="space-y-5">
+            <p className="text-sm text-white/60">
+              Invia questo codice al bot Infinity Warehouse entro 15 minuti.
+            </p>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <code className="block break-all text-lg text-white">/link {telegramLink.token}</code>
+              <button
+                onClick={async () => {
+                  await navigator.clipboard?.writeText(`/link ${telegramLink.token}`);
+                  setSuccess("Comando Telegram copiato.");
+                }}
+                className="mt-4 px-4 py-2.5 rounded-xl bg-white text-black font-medium hover:bg-white/90 transition flex items-center gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                Copia comando
+              </button>
+            </div>
+
+            <p className="text-xs text-white/40">
+              Dopo aver inviato il comando, apri il pulsante Warehouse nel bot per accedere alla Mini App.
+            </p>
+          </div>
+        </Modal>
       )}
 
 
